@@ -4,16 +4,17 @@
  */
 package depthPeeling.depthPeelingGL3;
 
+import com.jogamp.newt.awt.NewtCanvasAWT;
+import com.jogamp.newt.event.KeyEvent;
+import com.jogamp.newt.event.KeyListener;
+import com.jogamp.newt.event.MouseEvent;
+import com.jogamp.newt.event.MouseListener;
+import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.util.GLBuffers;
 import glutil.ViewData;
 import glutil.ViewPole;
 import glutil.ViewScale;
 import java.awt.Frame;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
@@ -30,7 +31,6 @@ import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLEventListener;
 import javax.media.opengl.GLProfile;
-import javax.media.opengl.awt.GLCanvas;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Quat;
@@ -40,12 +40,13 @@ import jglm.Vec3;
  *
  * @author gbarbieri
  */
-public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListener, MouseMotionListener {
+public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListener{
 
     private boolean depthPeelingMode = false;
     private int imageWidth = 1024;
     private int imageHeight = 768;
-    private GLCanvas gLCanvas;
+    private GLWindow glWindow;
+    private NewtCanvasAWT newtCanvasAWT;
     private int[] depthTextureId;
     private int[] colorTextureId;
     private int[] fboId;
@@ -59,7 +60,8 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
     private boolean panning = false;
     private boolean scaling = false;
 //    private float[] rot = new 
-    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\Frontlader5_3.stl";
+    private String filename = "C:\\Users\\gbarbieri\\Documents\\NetBeansProjects\\depthPeeling\\DepthPeeling\\src\\depthPeeling\\data\\Frontlader5.stl";
+//    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\Frontlader5_3.stl";
 //    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\Frontlader5.stl";
 //    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\ATLAS_RADLADER.stl";
 //    private String filename = "C:\\temp\\model.stl";
@@ -96,9 +98,9 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
         Frame frame = new Frame("Depth peeling GL3");
 
-        frame.add(depthPeeling.getgLCanvas());
+        frame.add(depthPeeling.getNewtCanvasAWT());
 
-        frame.setSize(depthPeeling.getgLCanvas().getWidth(), depthPeeling.getgLCanvas().getHeight());
+        frame.setSize(depthPeeling.getglWindow().getWidth(), depthPeeling.getglWindow().getHeight());
 
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -115,21 +117,22 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
         GLCapabilities gLCapabilities = new GLCapabilities(gLProfile);
 
-        gLCanvas = new GLCanvas(gLCapabilities);
+        glWindow = GLWindow.create(gLCapabilities);
+        
+        newtCanvasAWT = new NewtCanvasAWT(glWindow);
 
-        gLCanvas.setSize(imageWidth, imageHeight);
+        glWindow.setSize(imageWidth, imageHeight);
 
-        gLCanvas.addGLEventListener(this);
-        gLCanvas.addKeyListener(this);
-        gLCanvas.addMouseListener(this);
-        gLCanvas.addMouseMotionListener(this);
+        glWindow.addGLEventListener(this);
+        glWindow.addKeyListener(this);
+        glWindow.addMouseListener(this);
     }
 
     @Override
     public void init(GLAutoDrawable glad) {
         System.out.println("init");
 
-        gLCanvas.setAutoSwapBufferMode(false);
+        glWindow.setAutoSwapBufferMode(false);
 
         GL3 gl3 = glad.getGL().getGL3();
 
@@ -139,7 +142,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
         ViewScale viewScale = new ViewScale(3.0f, 20.0f, 1.5f, 0.5f, 0.0f, 0.0f, 90.0f / 250.0f);
 
-        viewPole = new ViewPole(initialViewData, viewScale);
+        viewPole = new ViewPole(initialViewData, viewScale, ViewPole.Projection.orthographic);
 
         initUBO(gl3, projectionBlockBinding);
 
@@ -650,98 +653,51 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         gl3.glViewport(0, 0, imageWidth, imageHeight);
     }
 
-    public GLCanvas getgLCanvas() {
-        return gLCanvas;
+    public GLWindow getglWindow() {
+        return glWindow;
     }
 
     @Override
-    public void keyTyped(KeyEvent e) {
+    public void keyPressed(KeyEvent ke) {
     }
 
     @Override
-    public void keyPressed(KeyEvent e) {
-
-        switch (e.getKeyCode()) {
-
-            case KeyEvent.VK_Y:
-                passesNumber--;
-                break;
-
-            case KeyEvent.VK_X:
-                passesNumber++;
-                break;
-        }
-
-        passesNumber = Jglm.clamp(passesNumber, 1, 100);
-
-        gLCanvas.display();
+    public void keyReleased(KeyEvent ke) {
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
+    public void mouseClicked(MouseEvent me) {
     }
 
     @Override
-    public void mouseClicked(MouseEvent e) {
+    public void mouseEntered(MouseEvent me) {
     }
 
     @Override
-    public void mousePressed(MouseEvent e) {
-        newX = e.getX();
-        newY = e.getY();
-
-        scaling = false;
-        panning = false;
-        rotating = false;
-
-        if (e.getButton() == MouseEvent.BUTTON1) {
-            if (e.isShiftDown()) {
-                scaling = true;
-            } else if (e.isControlDown()) {
-                panning = true;
-            } else {
-                rotating = true;
-            }
-        }
-
-        gLCanvas.display();
+    public void mouseExited(MouseEvent me) {
     }
 
     @Override
-    public void mouseReleased(MouseEvent e) {
+    public void mousePressed(MouseEvent me) {
     }
 
     @Override
-    public void mouseEntered(MouseEvent e) {
+    public void mouseReleased(MouseEvent me) {
     }
 
     @Override
-    public void mouseExited(MouseEvent e) {
+    public void mouseMoved(MouseEvent me) {
     }
 
     @Override
-    public void mouseDragged(MouseEvent e) {
-        oldX = newX;
-        oldY = newY;
-        newX = e.getX();
-        newY = e.getY();
-
-        float rel_x = (newX - oldX) / (float) imageWidth;
-        float rel_y = (newY - oldY) / (float) imageHeight;
-        if (rotating) {
-            rot[1] += (rel_x * 180);
-            rot[0] += (rel_y * 180);
-        } else if (panning) {
-            pos[0] -= rel_x;
-            pos[1] += rel_y;
-        } else if (scaling) {
-            pos[2] -= rel_y * pos[2];
-        }
-
-        gLCanvas.display();
+    public void mouseDragged(MouseEvent me) {
     }
 
     @Override
-    public void mouseMoved(MouseEvent e) {
+    public void mouseWheelMoved(MouseEvent me) {
+    }
+
+    public NewtCanvasAWT getNewtCanvasAWT() {
+        return newtCanvasAWT;
     }
 }
