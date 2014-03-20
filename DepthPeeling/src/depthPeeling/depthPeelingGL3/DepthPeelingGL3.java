@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.logging.Level;
@@ -59,12 +60,6 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
     private boolean rotating = false;
     private boolean panning = false;
     private boolean scaling = false;
-//    private float[] rot = new 
-    private String filename = "C:\\Users\\gbarbieri\\Documents\\NetBeansProjects\\depthPeeling\\DepthPeeling\\src\\depthPeeling\\data\\Frontlader5.stl";
-//    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\Frontlader5_3.stl";
-//    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\Frontlader5.stl";
-//    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\ATLAS_RADLADER.stl";
-//    private String filename = "C:\\temp\\model.stl";
     private int geoPassesNumber;
     private int passesNumber = 4;
     private ProgramInit dpInit;
@@ -253,7 +248,9 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
             int vertexLocal = 0;
             int attributesGlobal = 0;
 
-            fr = new FileReader(new File(this.filename));
+            URL url = getClass().getResource("/depthPeeling/data/frontlader5.stl");
+            
+            fr = new FileReader(new File(url.getPath()));
             BufferedReader br = new BufferedReader(fr);
 
             String line = "";
@@ -276,7 +273,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
             br.close();
             fr.close();
 
-            fr = new FileReader(new File(this.filename));
+            fr = new FileReader(new File(url.getPath()));
             br = new BufferedReader(fr);
             line = "";
             //            int triangles_read = 0;
