@@ -9,11 +9,11 @@
 
 #version 330
 
-layout (location = 0) in vec4 position;
+layout (location = 0) in vec2 position;
 
 uniform mat4 modelToClipMatrix;
 
 void main(void)
 {
-     gl_Position = modelToClipMatrix * position;
+    gl_Position = modelToClipMatrix * vec4(position, 0, 1);
 }

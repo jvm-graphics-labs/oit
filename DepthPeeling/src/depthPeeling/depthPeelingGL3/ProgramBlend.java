@@ -10,30 +10,24 @@ import javax.media.opengl.GL3;
  *
  * @author gbarbieri
  */
-public class ProgramBlend extends ProgramFullScreenQuad {
+public class ProgramBlend extends glsl.GLSLProgramObject {
     
     private int tempTexUnLoc;
+    private int modelToClipMatrixUnLoc;
     
     public ProgramBlend(GL3 gl3, String shadersFilepath, String vertexShader, String fragmentShader) {
 
         super(gl3, shadersFilepath, vertexShader, fragmentShader);
 
-        init(gl3);
-    }
-
-    public ProgramBlend(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders) {
-
-        super(gl3, shadersFilepath, vertexShaders, fragmentShaders);
-
-        init(gl3);
-    }
-    
-    private void init(GL3 gl3){
-        
         tempTexUnLoc = gl3.glGetUniformLocation(getProgramId(), "TempTex");
+        modelToClipMatrixUnLoc = gl3.glGetUniformLocation(getProgramId(), "modelToClipMatrix");
     }
 
     public int getTempTexUnLoc() {
         return tempTexUnLoc;
+    }
+    
+    public int getModelToClipMatrixUnLoc() {
+        return modelToClipMatrixUnLoc;
     }
 }

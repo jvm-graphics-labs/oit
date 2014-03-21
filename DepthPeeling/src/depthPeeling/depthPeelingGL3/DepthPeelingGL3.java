@@ -11,6 +11,8 @@ import com.jogamp.newt.event.MouseEvent;
 import com.jogamp.newt.event.MouseListener;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.util.GLBuffers;
+import com.jogamp.opengl.util.texture.Texture;
+import com.jogamp.opengl.util.texture.TextureIO;
 import glutil.ViewData;
 import glutil.ViewPole;
 import glutil.ViewScale;
@@ -31,6 +33,7 @@ import javax.media.opengl.GL3;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLEventListener;
+import javax.media.opengl.GLException;
 import javax.media.opengl.GLProfile;
 import jglm.Jglm;
 import jglm.Mat4;
@@ -41,13 +44,13 @@ import jglm.Vec3;
  *
  * @author gbarbieri
  */
-public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListener{
+public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListener {
 
     private boolean depthPeelingMode = false;
     private int imageWidth = 1024;
     private int imageHeight = 768;
-    private GLWindow glWindow;
-    private NewtCanvasAWT newtCanvasAWT;
+    public GLWindow glWindow;
+    public NewtCanvasAWT newtCanvasAWT;
     private int[] depthTextureId;
     private int[] colorTextureId;
     private int[] fboId;
@@ -56,12 +59,11 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
     private float FOVY = 30.0f;
     private float zNear = 0.0001f;
     private float zFar = 10.0f;
-    private int oldX, oldY, newX, newY;
     private boolean rotating = false;
     private boolean panning = false;
     private boolean scaling = false;
     private int geoPassesNumber;
-    private int passesNumber = 4;
+    private int passesNumber = 10;
     private ProgramInit dpInit;
     private ProgramPeel dpPeel;
     private ProgramBlend dpBlend;
@@ -77,9 +79,13 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
     private int[] quadVAO;
     private int[] modelVBO;
     private int[] modelVAO;
+    private int[] floorVBO;
+    private int[] floorVAO;
     private ViewPole viewPole;
     private int[] mvpMatrixesUBO;
     private float[] modelVertexAttributes;
+    private int base;
+    private Texture floorTexture;
 
     public DepthPeelingGL3() {
         initGL();
@@ -93,9 +99,9 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
         Frame frame = new Frame("Depth peeling GL3");
 
-        frame.add(depthPeeling.getNewtCanvasAWT());
+        frame.add(depthPeeling.newtCanvasAWT);
 
-        frame.setSize(depthPeeling.getglWindow().getWidth(), depthPeeling.getglWindow().getHeight());
+        frame.setSize(depthPeeling.glWindow.getWidth(), depthPeeling.glWindow.getHeight());
 
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -113,7 +119,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         GLCapabilities gLCapabilities = new GLCapabilities(gLProfile);
 
         glWindow = GLWindow.create(gLCapabilities);
-        
+
         newtCanvasAWT = new NewtCanvasAWT(glWindow);
 
         glWindow.setSize(imageWidth, imageHeight);
@@ -149,6 +155,10 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         buildShaders(gl3, projectionBlockBinding);
 
         initFullScreenQuad(gl3);
+
+        initFloor(gl3);
+
+        base = 10000;
     }
 
     private void initUBO(GL3 gl3, int projectionBlockBinding) {
@@ -171,15 +181,15 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         initQuadVBO(gl3);
 
         initQuadVAO(gl3);
-        
+
         Mat4 modelToClipMatrix = Jglm.orthographic2D(0, 1, 0, 1);
-        
+
         dpFinal.bind(gl3);
         {
             gl3.glUniformMatrix4fv(dpFinal.getModelToClipMatrixUnLoc(), 1, false, modelToClipMatrix.toFloatArray(), 0);
         }
         dpFinal.unbind(gl3);
-        
+
         dpBlend.bind(gl3);
         {
             gl3.glUniformMatrix4fv(dpBlend.getModelToClipMatrixUnLoc(), 1, false, modelToClipMatrix.toFloatArray(), 0);
@@ -225,15 +235,82 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
     }
 
+    private void initFloor(GL3 gl3) {
+
+        initFloorVBO(gl3);
+
+        initFloorVAO(gl3);
+
+        URL url = getClass().getResource("/depthPeeling/data/floor.png");
+
+        try {
+            floorTexture = TextureIO.newTexture(new File(url.getPath()), true);
+        } catch (IOException | GLException ex) {
+            Logger.getLogger(DepthPeelingGL3.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        floorTexture.setTexParameteri(gl3, GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
+        floorTexture.setTexParameteri(gl3, GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
+        floorTexture.setTexParameteri(gl3, GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
+        floorTexture.setTexParameteri(gl3, GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
+    }
+
+    private void initFloorVAO(GL3 gl3) {
+
+        floorVAO = new int[1];
+
+        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, floorVBO[0]);
+
+        gl3.glGenVertexArrays(1, IntBuffer.wrap(floorVAO));
+        gl3.glBindVertexArray(floorVAO[0]);
+        {
+            gl3.glEnableVertexAttribArray(0);
+            gl3.glEnableVertexAttribArray(1);
+            {
+                int stride = (3 + 2) * 4;
+                int offset = 0;
+                gl3.glVertexAttribPointer(0, 3, GL3.GL_FLOAT, false, stride, offset);
+                offset = 3 * 4;
+                gl3.glVertexAttribPointer(1, 2, GL3.GL_FLOAT, false, stride, offset);
+            }
+        }
+        gl3.glBindVertexArray(0);
+    }
+
+    private void initFloorVBO(GL3 gl3) {
+
+        float side = 5000f;
+
+        float[] verticesAttributes = new float[]{
+            -side, -side, 0f, 0f, 0f,
+            -side, side, 0f, 0f, 1f,
+            side, side, 0f, 1f, 1f,
+            side, -side, 0f, 1f, 0f
+        };
+
+        floorVBO = new int[1];
+
+        gl3.glGenBuffers(1, IntBuffer.wrap(floorVBO));
+
+        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, floorVBO[0]);
+        {
+            FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(verticesAttributes);
+
+            gl3.glBufferData(GL3.GL_ARRAY_BUFFER, verticesAttributes.length * 4, buffer, GL3.GL_STATIC_DRAW);
+        }
+        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
+    }
+
     private void buildShaders(GL3 gl3, int projectionBlockIndex) {
         System.out.print("buildShaders... ");
 
         String shadersFilepath = "/depthPeeling/depthPeelingGL3/shaders/";
 
-        dpInit = new ProgramInit(gl3, shadersFilepath, new String[]{"dpInit_VS.glsl"}, new String[]{"shade_FS.glsl", "dpInit_FS.glsl"}, projectionBlockIndex);
-//        dpInit = new ProgramInit(gl3, shadersFilepath, "dpInit_VS.glsl", "dpInit_FS.glsl", projectionBlockIndex);
+        //dpInit = new ProgramInit(gl3, shadersFilepath, new String[]{"dpInit_VS.glsl"}, new String[]{"shade_FS.glsl", "dpInit_FS.glsl"}, projectionBlockIndex);
+        dpInit = new ProgramInit(gl3, shadersFilepath, "dpInit_VS.glsl", "dpInit_FS.glsl", projectionBlockIndex);
 
-        dpPeel = new ProgramPeel(gl3, shadersFilepath, new String[]{"dpPeel_VS.glsl"}, new String[]{"shade_FS.glsl", "dpPeel_FS.glsl"}, projectionBlockIndex);
+//        dpPeel = new ProgramPeel(gl3, shadersFilepath, new String[]{"dpPeel_VS.glsl"}, new String[]{"shade_FS.glsl", "dpPeel_FS.glsl"}, projectionBlockIndex);
+        dpPeel = new ProgramPeel(gl3, shadersFilepath, "dpPeel_VS.glsl", "dpPeel_FS.glsl", projectionBlockIndex);
 
         dpBlend = new ProgramBlend(gl3, shadersFilepath, "dpBlend_VS.glsl", "dpBlend_FS.glsl");
 
@@ -249,7 +326,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
             int attributesGlobal = 0;
 
             URL url = getClass().getResource("/depthPeeling/data/frontlader5.stl");
-            
+
             fr = new FileReader(new File(url.getPath()));
             BufferedReader br = new BufferedReader(fr);
 
@@ -328,7 +405,6 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 //                        System.out.print(data[i] + " ");
 //                    }
 //                    System.out.println("");
-
                     System.arraycopy(data, 0, modelVertexAttributes, attributesGlobal * 3 * 3 * 2, data.length);
 
                     vertexLocal = 0;
@@ -338,7 +414,6 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
             br.close();
             fr.close();
-
 
             System.out.println("Done, number of triangles: " + modelVertexAttributes.length / 18);
         } catch (FileNotFoundException ex) {
@@ -405,7 +480,6 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
             gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_DEPTH_COMPONENT32F, imageWidth, imageHeight, 0, GL3.GL_DEPTH_COMPONENT, GL3.GL_FLOAT, null);
 
-
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorTextureId[i]);
 
             gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
@@ -414,7 +488,6 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
             gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
 
             gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA, imageWidth, imageHeight, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
-
 
             gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, fboId[i]);
 
@@ -465,27 +538,20 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
         GL3 gl3 = glad.getGL().getGL3();
 
+        updateCamera(gl3);
+        updateProjection(gl3, imageWidth, imageHeight, base);
+
         geoPassesNumber = 0;
-
-//        gl3.glMatrixMode(GL2.GL_MODELVIEW);
-//        gl3.glLoadIdentity();
-//        glu.gluLookAt(pos[0], pos[1], pos[2], pos[0], pos[1], 0.0f, 0.0f, 1.0f, 0.0f);
-//        gl3.glRotatef(rot[0], 1.0f, 0.0f, 0.0f);
-//        gl3.glRotatef(rot[1], 0.0f, 1.0f, 0.0f);
-//        gl3.glTranslated(transl[0], transl[1], transl[2]);
-//        gl3.glScalef(scale, scale, scale);
-
+        
         renderDepthPeeling(gl3);
-
-//        gl2.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-//        gl2.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
-//        gl2.glColor3f(0.5f, 0.5f, 0.5f);
-//        drawModel(gl2);
-
+        
         glad.swapBuffers();
+
+        checkError(gl3);
     }
 
     private void renderDepthPeeling(GL3 gl3) {
+        System.out.println("render");
         /**
          * (1) Initialize min depth buffer.
          */
@@ -501,8 +567,14 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         dpInit.bind(gl3);
         {
             gl3.glUniform1f(dpInit.getAlphaUnLoc(), opacity);
-
+            gl3.glUniform1i(dpInit.getEnableTextureUL(), 0);
             drawModel(gl3);
+
+//            gl3.glUniform1i(dpInit.getEnableTextureUL(), 1);
+//            gl3.glActiveTexture(GL3.GL_TEXTURE0);
+//            floorTexture.bind(gl3);
+//            gl3.glUniform1i(dpInit.getTexture0UL(), 0);
+//            drawFloor(gl3);
         }
         dpInit.unbind(gl3);
 
@@ -512,10 +584,10 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         int layersNumber = (passesNumber - 1) * 2;
 //        System.out.println("layersNumber: " + layersNumber);
         for (int layer = 1; layer < layersNumber; layer++) {
-
+//System.out.println("layer " + layer);
             int currentId = layer % 2;
             int previousId = 1 - currentId;
-
+            
             gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, fboId[currentId]);
 //            gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
             gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
@@ -534,7 +606,16 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
                     gl3.glUniform1i(dpPeel.getDepthTexUnLoc(), 0);
                     {
                         gl3.glUniform1f(dpPeel.getAlphaUnLoc(), opacity);
+                        gl3.glUniform1i(dpPeel.getEnableTextureUL(), 0);
+                        gl3.glUniform1i(dpPeel.getTexture0UL(), 1);
                         drawModel(gl3);
+
+                        gl3.glUniform1i(dpPeel.getEnableTextureUL(), 1);
+                        
+                        gl3.glActiveTexture(GL3.GL_TEXTURE1);
+                        floorTexture.bind(gl3);                        
+                        
+                        drawFloor(gl3);
                     }
                     gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
                 }
@@ -561,7 +642,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
                 }
                 dpBlend.unbind(gl3);
             }
-            gl3.glDisable(GL3.GL_BLEND);
+            gl3.glDisable(GL3.GL_BLEND);            
         }
 
         /**
@@ -601,6 +682,18 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         geoPassesNumber++;
     }
 
+    private void drawFloor(GL3 gl3) {
+
+        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, floorVBO[0]);
+
+        gl3.glBindVertexArray(floorVAO[0]);
+        {
+            //  Render, passing the vertex number
+            gl3.glDrawArrays(GL3.GL_QUADS, 0, 4);
+        }
+        gl3.glBindVertexArray(0);
+    }
+
     private void drawFullScreenQuad(GL3 gl3) {
 
         gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, quadVBO[0]);
@@ -629,33 +722,82 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
             gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
         }
 
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, mvpMatrixesUBO[0]);
-        {
-            float base = 10000.0f;
-            float aspect = (float) width / (float) height;
-            int size = 16 * 4;
-            //  Projection Matrix
-            //            Mat4 projectionMatrix = Jglm.perspective(FOVY, imageWidth / imageHeight, zNear, zFar);
-            Mat4 projectionMatrix = Jglm.orthographic(-base * aspect, base * aspect, -base, base, -base, base);
-
-            gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, 0, size, GLBuffers.newDirectFloatBuffer(projectionMatrix.toFloatArray()));
-
-            //  Modelview Matrix
-            Mat4 modelviewMatrix = viewPole.calcMatrix();
-
-            gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, 16 * 4, size, GLBuffers.newDirectFloatBuffer(modelviewMatrix.toFloatArray()));
-        }
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, 0);
+        updateProjection(gl3, width, height, 10000);
 
         gl3.glViewport(0, 0, imageWidth, imageHeight);
     }
 
-    public GLWindow getglWindow() {
-        return glWindow;
+    private void updateProjection(GL3 gl3, int width, int height, int base) {
+
+        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, mvpMatrixesUBO[0]);
+        {
+            float aspect = (float) width / (float) height;
+            int size = 16 * 4;
+            //  Projection Matrix
+            Mat4 projectionMatrix = Jglm.orthographic(-base * aspect, base * aspect, -base, base, -base, base);
+
+            FloatBuffer floatBuffer = GLBuffers.newDirectFloatBuffer(projectionMatrix.toFloatArray());
+
+            gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, 0, size, floatBuffer);
+        }
+    }
+
+    private void updateCamera(GL3 gl3) {
+
+        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, mvpMatrixesUBO[0]);
+        {
+            int size = 16 * 4;
+            //  Modelview Matrix
+            Mat4 modelviewMatrix = viewPole.calcMatrix();
+
+            FloatBuffer floatBuffer = GLBuffers.newDirectFloatBuffer(modelviewMatrix.toFloatArray());
+
+            gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, 16 * 4, size, floatBuffer);
+        }
+        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, 0);
     }
 
     @Override
     public void keyPressed(KeyEvent ke) {
+
+        Quat offset;
+        float angle = 5;
+
+        switch (ke.getKeyCode()) {
+
+            case KeyEvent.VK_W:
+                offset = Jglm.angleAxis(angle, new Vec3(1f, 0f, 0f));
+//                viewPole.getCurrView().setOrient(viewPole.getCurrView().getOrient().mult(offset));
+                viewPole.getCurrView().setOrient(offset.mult(viewPole.getCurrView().getOrient()));
+                break;
+
+            case KeyEvent.VK_S:
+                offset = Jglm.angleAxis(-angle, new Vec3(1f, 0f, 0f));
+//                viewPole.getCurrView().setOrient(viewPole.getCurrView().getOrient().mult(offset));
+                viewPole.getCurrView().setOrient(offset.mult(viewPole.getCurrView().getOrient()));
+                break;
+
+            case KeyEvent.VK_A:
+                offset = Jglm.angleAxis(angle, new Vec3(0f, 1f, 0f));
+//                viewPole.getCurrView().setOrient(viewPole.getCurrView().getOrient().mult(offset));
+                viewPole.getCurrView().setOrient(offset.mult(viewPole.getCurrView().getOrient()));
+                break;
+
+            case KeyEvent.VK_D:
+                offset = Jglm.angleAxis(-angle, new Vec3(0f, 1f, 0f));
+//                viewPole.getCurrView().setOrient(viewPole.getCurrView().getOrient().mult(offset));
+                viewPole.getCurrView().setOrient(offset.mult(viewPole.getCurrView().getOrient()));
+                break;
+
+            case KeyEvent.VK_Q:
+                base += 100;
+                break;
+
+            case KeyEvent.VK_E:
+                base -= 100;
+                break;
+        }
+        glWindow.display();
     }
 
     @Override
@@ -694,7 +836,11 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
     public void mouseWheelMoved(MouseEvent me) {
     }
 
-    public NewtCanvasAWT getNewtCanvasAWT() {
-        return newtCanvasAWT;
+    private void checkError(GL3 gl3) {
+
+        int error = gl3.glGetError();
+        if (error != 0) {
+            System.out.println("error " + error);
+        }
     }
 }

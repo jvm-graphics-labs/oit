@@ -10,30 +10,39 @@ import javax.media.opengl.GL3;
  *
  * @author gbarbieri
  */
-public class ProgramPeel extends ProgramInit {
+public class ProgramPeel extends glsl.GLSLProgramObject {
 
     private int depthTexUnLoc;
-    
-    public ProgramPeel(GL3 gl3, String shadersFilepath, String vertexShader, String fragmentShader, int mvpMatrixBlockIndex) {
+    private int alphaUnLoc;
+    private int texture0UL;
+    private int enableTextureUL;
 
-        super(gl3, shadersFilepath, vertexShader, fragmentShader, mvpMatrixBlockIndex);
+    public ProgramPeel(GL3 gl3, String shadersFilepath, String vertexShader, String fragmentShader, int mvpMatrixUBB) {
 
-        init(gl3);
-    }
+        super(gl3, shadersFilepath, vertexShader, fragmentShader);
 
-    public ProgramPeel(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders, int mvpMatrixBlockIndex) {
+        alphaUnLoc = gl3.glGetUniformLocation(getProgramId(), "alpha");
+        depthTexUnLoc = gl3.glGetUniformLocation(getProgramId(), "depthTex");
+        texture0UL = gl3.glGetUniformLocation(getProgramId(), "texture0");
+        enableTextureUL = gl3.glGetUniformLocation(getProgramId(), "enableTexture");
 
-        super(gl3, shadersFilepath, vertexShaders, fragmentShaders, mvpMatrixBlockIndex);
-
-        init(gl3);
-    }
-
-    private void init(GL3 gl3) {
-        
-        depthTexUnLoc = gl3.glGetUniformLocation(getProgramId(), "DepthTex");
+        int mvpMatrixUBI = gl3.glGetUniformBlockIndex(getProgramId(), "mvpMatrixes");
+        gl3.glUniformBlockBinding(getProgramId(), mvpMatrixUBI, mvpMatrixUBB);
     }
 
     public int getDepthTexUnLoc() {
         return depthTexUnLoc;
+    }
+
+    public int getAlphaUnLoc() {
+        return alphaUnLoc;
+    }
+
+    public int getTexture0UL() {
+        return texture0UL;
+    }
+
+    public int getEnableTextureUL() {
+        return enableTextureUL;
     }
 }
