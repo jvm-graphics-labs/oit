@@ -570,11 +570,11 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
             gl3.glUniform1i(dpInit.getEnableTextureUL(), 0);
             drawModel(gl3);
 
-//            gl3.glUniform1i(dpInit.getEnableTextureUL(), 1);
-//            gl3.glActiveTexture(GL3.GL_TEXTURE0);
-//            floorTexture.bind(gl3);
-//            gl3.glUniform1i(dpInit.getTexture0UL(), 0);
-//            drawFloor(gl3);
+            gl3.glUniform1i(dpInit.getEnableTextureUL(), 1);
+            gl3.glActiveTexture(GL3.GL_TEXTURE0);
+            floorTexture.bind(gl3);
+            gl3.glUniform1i(dpInit.getTexture0UL(), 0);
+            drawFloor(gl3);
         }
         dpInit.unbind(gl3);
 
@@ -584,7 +584,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         int layersNumber = (passesNumber - 1) * 2;
 //        System.out.println("layersNumber: " + layersNumber);
         for (int layer = 1; layer < layersNumber; layer++) {
-//System.out.println("layer " + layer);
+System.out.println("layer " + layer);
             int currentId = layer % 2;
             int previousId = 1 - currentId;
             
@@ -611,7 +611,6 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
                         drawModel(gl3);
 
                         gl3.glUniform1i(dpPeel.getEnableTextureUL(), 1);
-                        
                         gl3.glActiveTexture(GL3.GL_TEXTURE1);
                         floorTexture.bind(gl3);                        
                         
