@@ -190,7 +190,6 @@ public class GLSLProgramObject {
                 } catch (IOException closee) {
                 }
             }
-
             int iID = gl.glCreateShader(GL2.GL_FRAGMENT_SHADER);
 
             String[] akProgramText = new String[1];
