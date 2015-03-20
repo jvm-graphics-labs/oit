@@ -26,6 +26,10 @@ public class Init extends glsl.GLSLProgramObject {
         alphaUL = gl3.glGetUniformLocation(getProgramId(), "alpha");
 
         modelToWorldUL = gl3.glGetUniformLocation(getProgramId(), "modelToWorld");
+
+        if (projectionUBI == -1 || alphaUL == -1 || modelToWorldUL == -1) {
+            System.out.println("[Init] UL error");
+        }
     }
 
     public int getAlphaUL() {

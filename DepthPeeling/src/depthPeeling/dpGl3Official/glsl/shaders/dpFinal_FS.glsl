@@ -17,5 +17,5 @@ out vec4 outputColor;
 void main(void)
 {
     vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
-    outputColor.rgb = frontColor.rgb + backgroundColor * frontColor.a;
+    outputColor = vec4(frontColor.rgb + backgroundColor * frontColor.a, 1.0);
 }

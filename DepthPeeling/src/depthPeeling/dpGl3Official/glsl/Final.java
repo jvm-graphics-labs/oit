@@ -33,10 +33,14 @@ public class Final extends glsl.GLSLProgramObject {
     private void init(GL3 gl3) {
 
         modelToClipUL = gl3.glGetUniformLocation(getProgramId(), "modelToClip");
-        
-        colorTexUL = gl3.glGetUniformLocation(getProgramId(), "ColorTex");
 
-        backgroundColorUL = gl3.glGetUniformLocation(getProgramId(), "BackgroundColor");
+        colorTexUL = gl3.glGetUniformLocation(getProgramId(), "colorTex");
+
+        backgroundColorUL = gl3.glGetUniformLocation(getProgramId(), "backgroundColor");
+
+        if (modelToClipUL == -1 || colorTexUL == -1 || backgroundColorUL == -1) {
+            System.out.println("[Final] UL error");
+        }
     }
 
     public int getColorTexUL() {

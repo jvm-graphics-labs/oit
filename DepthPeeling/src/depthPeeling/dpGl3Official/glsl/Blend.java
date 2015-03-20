@@ -22,6 +22,10 @@ public class Blend extends glsl.GLSLProgramObject {
         modelToClipUL = gl3.glGetUniformLocation(getProgramId(), "modelToClip");
         
         tempTexUL = gl3.glGetUniformLocation(getProgramId(), "tempTex");
+        
+        if (modelToClipUL == -1 || tempTexUL == -1 ) {
+            System.out.println("[Blend] UL error");
+        }
     }
 
     public Blend(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders) {

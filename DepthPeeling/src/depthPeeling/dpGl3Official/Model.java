@@ -19,6 +19,7 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import javax.media.opengl.GL3;
+import jglm.Vec3;
 
 /**
  *
@@ -36,8 +37,8 @@ public final class Model {
     private int pOffset_;
     private int nOffset_;
     private int vtxSize_;
-    private float[] vertexAttributes;
     private int[] objects;
+    private Vec3 center;
 
     public Model(GL3 gl3, String filename) throws IOException {
 
@@ -56,11 +57,11 @@ public final class Model {
         compile();
 
         computeBoundingBox();
-        
+
         System.out.println(getPositionCount() + " vertices");
         System.out.println(getIndexCount() / 3 + " triangles");
-//        readAsciiStl(filename);
-//        objects = new int[Objects.size.ordinal()];
+
+        objects = new int[Objects.size.ordinal()];
 
         initVbo(gl3);
         initIbo(gl3);
@@ -74,8 +75,8 @@ public final class Model {
             gl3.glBindVertexArray(objects[Objects.vao.ordinal()]);
             {
                 //  Render, passing the vertex number
-                gl3.glDrawArrays(GL3.GL_TRIANGLES, 0, vertexAttributes.length / 6);
-//                gl3.glDrawElements(GL3.GL_TRIANGLES, getCompiledIndexCount(), GL3.GL_UNSIGNED_INT, 0);
+//                gl3.glDrawArrays(GL3.GL_TRIANGLES, 0, vertexAttributes.length / 6);
+                gl3.glDrawElements(GL3.GL_TRIANGLES, getCompiledIndexCount(), GL3.GL_UNSIGNED_INT, 0);
             }
             gl3.glBindVertexArray(0);
         }
@@ -111,6 +112,9 @@ public final class Model {
         }
         System.out.println("min (" + minVal[0] + ", " + minVal[1] + ", " + minVal[2] + ")");
         System.out.println("max (" + maxVal[0] + ", " + maxVal[1] + ", " + maxVal[2] + ")");
+
+        center = new Vec3((maxVal[0] + minVal[0]) / 2, (maxVal[1] + minVal[1]) / 2, (maxVal[2] + minVal[2]) / 2);
+        center.print("center");
     }
 
     /**
@@ -126,7 +130,7 @@ public final class Model {
      * @return
      */
     private boolean load(String filePath) {
-
+        System.out.println("loading OBJ...");
         URL fileUrl = getClass().getResource(filePath);
 
         if (fileUrl != null) {
@@ -270,7 +274,7 @@ public final class Model {
      * connectivity.
      */
     private void compile() {
-
+        System.out.println("compiling mesh...");
         boolean needsTriangles = true;
 
         HashMap<IdxSet, Integer> pts = new HashMap<>();
@@ -326,105 +330,6 @@ public final class Model {
         indices_.rewind();
     }
 
-    private void readAsciiStl(String filename) throws FileNotFoundException, IOException {
-
-        URL url = getClass().getResource(filename);
-
-        FileReader fr;
-        int vertexLocal = 0;
-        int attributesGlobal = 0;
-
-        fr = new FileReader(new File(url.getPath()));
-        BufferedReader br = new BufferedReader(fr);
-
-        String line = "";
-        String values[];
-        float[] data = new float[3 * 3 * 2];
-        float[] vertex = new float[9];
-        float[] normal = new float[3];
-
-        // Count triangles
-        int triangles = 0;
-        while ((line = br.readLine()) != null) {
-            line = line.trim().toLowerCase();
-            if (line.startsWith("facet")) {
-                triangles++;
-            }
-        }
-        System.out.println("triangles: " + triangles);
-        //  3 Vertexes, 3 coordinates, 2 attributes
-        vertexAttributes = new float[triangles * 3 * 3 * 2];
-        br.close();
-        fr.close();
-
-        fr = new FileReader(new File(url.getPath()));
-        br = new BufferedReader(fr);
-        line = "";
-        //            int triangles_read = 0;
-
-        while ((line = br.readLine()) != null) {
-
-            line = line.trim().toLowerCase();
-
-            // Read normals
-            if (line.startsWith("facet")) {
-
-                int normalLocal = 0;
-                values = line.split(" ");
-
-                for (int i = 2; i < values.length; i++) {
-
-                    if (!values[i].isEmpty()) {
-
-                        normal[normalLocal] = Float.parseFloat(values[i]);
-                        normalLocal++;
-                    }
-                }
-            }
-
-            // Read points
-            if (line.startsWith("vertex")) {
-
-                values = line.split(" ");
-
-                for (int i = 1; i < values.length; i++) {
-                    if (!values[i].isEmpty()) {
-                        vertex[vertexLocal] = Float.parseFloat(values[i]);
-                        vertexLocal++;
-                    }
-                }
-            }
-
-            if (vertexLocal == 9) {
-                //  Fill vertex and normals interleaved
-                for (int i = 0; i < 3; i++) {
-
-                    data[i * 6] = vertex[i * 3];
-                    data[i * 6 + 1] = vertex[i * 3 + 1];
-                    data[i * 6 + 2] = vertex[i * 3 + 2];
-                    data[i * 6 + 3] = normal[0];
-                    data[i * 6 + 4] = normal[1];
-                    data[i * 6 + 5] = normal[2];
-                }
-
-//                    System.out.print("data[" + attributesGlobal + "] ");
-//                    for (int i = 0; i < data.length; i++) {
-//                        System.out.print(data[i] + " ");
-//                    }
-//                    System.out.println("");
-                System.arraycopy(data, 0, vertexAttributes, attributesGlobal * 3 * 3 * 2, data.length);
-
-                vertexLocal = 0;
-                attributesGlobal++;
-            }
-        }
-
-        br.close();
-        fr.close();
-
-        System.out.println("Done, number of triangles: " + vertexAttributes.length / 18);
-    }
-
     private void initVbo(GL3 gl3) {
 
         gl3.glGenBuffers(1, objects, Objects.vbo.ordinal());
@@ -474,39 +379,8 @@ public final class Model {
         gl3.glBindVertexArray(0);
     }
 
-    private void initVbo_(GL3 gl3) {
-
-        gl3.glGenBuffers(1, objects, Objects.vbo.ordinal());
-
-        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, objects[Objects.vbo.ordinal()]);
-        {
-            FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(vertexAttributes);
-
-            gl3.glBufferData(GL3.GL_ARRAY_BUFFER, vertexAttributes.length * Buffers.SIZEOF_FLOAT, buffer,
-                    GL3.GL_STATIC_DRAW);
-        }
-        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-    }
-
-    private void initVao_(GL3 gl3) {
-
-        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, objects[Objects.vbo.ordinal()]);
-
-        gl3.glGenVertexArrays(1, objects, Objects.vao.ordinal());
-        gl3.glBindVertexArray(objects[Objects.vao.ordinal()]);
-        {
-            gl3.glEnableVertexAttribArray(0);
-            gl3.glEnableVertexAttribArray(1);
-            {
-                //  2 attributes, 3 components, 4 Bytes/Float
-                int stride = 2 * 3 * Buffers.SIZEOF_FLOAT;
-                int offset = 0;
-                gl3.glVertexAttribPointer(0, 3, GL3.GL_FLOAT, false, stride, offset);
-                offset = 3 * Buffers.SIZEOF_FLOAT;
-                gl3.glVertexAttribPointer(1, 3, GL3.GL_FLOAT, false, stride, offset);
-            }
-        }
-        gl3.glBindVertexArray(0);
+    public Vec3 getCenter() {
+        return center;
     }
 
     public class IdxSet {

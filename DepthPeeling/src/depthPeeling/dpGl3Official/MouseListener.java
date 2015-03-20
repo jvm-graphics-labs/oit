@@ -68,7 +68,7 @@ public class MouseListener implements com.jogamp.newt.event.MouseListener {
         }
         MouseEvent me1 = new MouseEvent(me.getEventType(), me.getSource(), me.getWhen(), me.getModifiers(),
                 me.getX(), me.getY(), me.getClickCount(), me.getButton(), newRotation, me.getRotationScale());
-        viewPole.mouseWheelMoved(me1);
+        viewPole.mouseWheelMoved(me);
     }
 
 }

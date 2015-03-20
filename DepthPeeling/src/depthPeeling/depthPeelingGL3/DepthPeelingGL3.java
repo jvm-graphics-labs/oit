@@ -542,9 +542,9 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         updateProjection(gl3, imageWidth, imageHeight, base);
 
         geoPassesNumber = 0;
-        
+
         renderDepthPeeling(gl3);
-        
+
         glad.swapBuffers();
 
         checkError(gl3);
@@ -555,8 +555,8 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         /**
          * (1) Initialize min depth buffer.
          */
+        //        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
         gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, colorBlenderFboId[0]);
-//        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
         gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
 
         gl3.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -584,10 +584,10 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         int layersNumber = (passesNumber - 1) * 2;
 //        System.out.println("layersNumber: " + layersNumber);
         for (int layer = 1; layer < layersNumber; layer++) {
-System.out.println("layer " + layer);
+            System.out.println("layer " + layer);
             int currentId = layer % 2;
             int previousId = 1 - currentId;
-            
+
             gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, fboId[currentId]);
 //            gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
             gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
@@ -612,8 +612,8 @@ System.out.println("layer " + layer);
 
                         gl3.glUniform1i(dpPeel.getEnableTextureUL(), 1);
                         gl3.glActiveTexture(GL3.GL_TEXTURE1);
-                        floorTexture.bind(gl3);                        
-                        
+                        floorTexture.bind(gl3);
+
                         drawFloor(gl3);
                     }
                     gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
@@ -641,7 +641,7 @@ System.out.println("layer " + layer);
                 }
                 dpBlend.unbind(gl3);
             }
-            gl3.glDisable(GL3.GL_BLEND);            
+            gl3.glDisable(GL3.GL_BLEND);
         }
 
         /**

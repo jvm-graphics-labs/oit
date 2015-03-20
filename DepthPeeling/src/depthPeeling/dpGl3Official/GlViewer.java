@@ -8,7 +8,6 @@ import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLBuffers;
-import depthPeeling.dpGl3Official.glsl.Simple;
 import glutil.ViewData;
 import glutil.ViewPole;
 import glutil.ViewScale;
@@ -43,7 +42,6 @@ public class GlViewer implements GLEventListener {
     private int[] ubo;
     private MouseListener mouseListener;
     public static float projectionBase;
-    private Simple simple;
 
     public GlViewer() {
 
@@ -76,11 +74,17 @@ public class GlViewer implements GLEventListener {
 
         GL3 gl3 = glad.getGL().getGL3();
 
-        Vec3 target = new Vec3(0.0f, 0.0f, 0.0f);
-        Quat orient = new Quat(0.0f, 0.0f, 0.0f, 1.0f);
-        ViewData initialViewData = new ViewData(target, orient, 10000.0f, 0.0f);
+        try {
+            model = new Model(gl3, "/depthPeeling/data/dragon.obj");
+        } catch (IOException ex) {
+            Logger.getLogger(GlViewer.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
-        ViewScale viewScale = new ViewScale(3.0f, 20.0f, 1.5f, 0.5f, 0.0f, 0.0f, 90.0f / 250.0f);
+        Vec3 target = model.getCenter();
+        Quat orient = new Quat(0.0f, 0.0f, 0.0f, 1.0f);
+        ViewData initialViewData = new ViewData(target, orient, 0.5f, 0.0f);
+
+        ViewScale viewScale = new ViewScale(3.0f, 20.0f, 1.5f, 0.0005f, 0.0f, 0.0f, 90.0f / 250.0f);
 
         viewPole = new ViewPole(initialViewData, viewScale, ViewPole.Projection.perspective);
 
@@ -93,16 +97,8 @@ public class GlViewer implements GLEventListener {
 
         depthPeeling = new DepthPeeling(gl3, imageSize, blockBinding);
 
-        try {
-//            model = new Model(gl3, "/depthPeeling/data/Frontlader5.stl");
-            model = new Model(gl3, "/depthPeeling/data/dragon.obj");
-        } catch (IOException ex) {
-            Logger.getLogger(GlViewer.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-//        gl3.glDisable(GL3.GL_CULL_FACE);
-        simple = new Simple(gl3, "/depthPeeling/dpGl3Official/glsl/shaders/", "Simple_VS.glsl", "Simple_FS.glsl", blockBinding);
-
+        gl3.glDisable(GL3.GL_CULL_FACE);
+        
         projectionBase = 5000f;
 
         checkError(gl3);
@@ -146,16 +142,6 @@ public class GlViewer implements GLEventListener {
         gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, 0);
 
         depthPeeling.render(gl3, model);
-//        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
-//        gl3.glClearColor(1, 0, 0, 1);
-//        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT | GL3.GL_DEPTH_BUFFER_BIT);
-//        simple.bind(gl3);
-//        {
-//            gl3.glUniformMatrix4fv(simple.getModelToWorldUL(), 1, false, new Mat4(1f).toFloatArray(), 0);
-//
-//            model.render(gl3);
-//        }
-//        simple.unbind(gl3);
 
         checkError(gl3);
     }
@@ -183,9 +169,7 @@ public class GlViewer implements GLEventListener {
             int size = 16 * GLBuffers.SIZEOF_FLOAT;
             int offset = size;
 
-//            Mat4 projMat = Jglm.orthographic(-projectionBase * aspect, projectionBase * aspect,
-//                    -projectionBase, projectionBase, -projectionBase, projectionBase);
-            Mat4 projMat = Jglm.perspective(60f, aspect, 1, 100000);
+            Mat4 projMat = Jglm.perspective(60f, aspect, 0.0001f, 10);
             FloatBuffer projFB = GLBuffers.newDirectFloatBuffer(projMat.toFloatArray());
 
             gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, offset, size, projFB);
