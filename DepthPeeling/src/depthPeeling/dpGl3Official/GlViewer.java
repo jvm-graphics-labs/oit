@@ -94,8 +94,8 @@ public class GlViewer implements GLEventListener {
         depthPeeling = new DepthPeeling(gl3, imageSize, blockBinding);
 
         try {
-            model = new Model(gl3, "/depthPeeling/data/Frontlader5.stl");
-//            model = new Model(gl3, "/depthPeeling/data/dragon.obj");
+//            model = new Model(gl3, "/depthPeeling/data/Frontlader5.stl");
+            model = new Model(gl3, "/depthPeeling/data/dragon.obj");
         } catch (IOException ex) {
             Logger.getLogger(GlViewer.class.getName()).log(Level.SEVERE, null, ex);
         }

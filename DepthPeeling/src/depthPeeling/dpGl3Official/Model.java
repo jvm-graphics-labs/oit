@@ -24,7 +24,7 @@ import javax.media.opengl.GL3;
  *
  * @author gbarbieri
  */
-public class Model {
+public final class Model {
 
     private ArrayList<Float> positions_;
     private ArrayList<Float> normals_;
@@ -41,30 +41,30 @@ public class Model {
 
     public Model(GL3 gl3, String filename) throws IOException {
 
-//        positions_ = new ArrayList<>();
-//        normals_ = new ArrayList<>();
-//
-//        pIndex_ = new ArrayList<>();
-//        nIndex_ = new ArrayList<>();
-//
-//        indices_ = null;
-//        vertices_ = null;
-//        vtxSize_ = 0;
-//
-//        load(filename);
-//
-//        compile();
-//
-//        computeBoundingBox();
-//        
-//        System.out.println(getPositionCount() + " vertices");
-//        System.out.println(getIndexCount() / 3 + " triangles");
-        readAsciiStl(filename);
-        objects = new int[Objects.size.ordinal()];
+        positions_ = new ArrayList<>();
+        normals_ = new ArrayList<>();
 
-        initVbo_(gl3);
-//        initIbo(gl3);
-        initVao_(gl3);
+        pIndex_ = new ArrayList<>();
+        nIndex_ = new ArrayList<>();
+
+        indices_ = null;
+        vertices_ = null;
+        vtxSize_ = 0;
+
+        load(filename);
+
+        compile();
+
+        computeBoundingBox();
+        
+        System.out.println(getPositionCount() + " vertices");
+        System.out.println(getIndexCount() / 3 + " triangles");
+//        readAsciiStl(filename);
+//        objects = new int[Objects.size.ordinal()];
+
+        initVbo(gl3);
+        initIbo(gl3);
+        initVao(gl3);
     }
 
     public void render(GL3 gl3) {
