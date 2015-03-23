@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package depthPeeling.dpGl3Official.glsl;
+package depthPeeling.dpGl3OfficialOpaque.glsl;
 
 import javax.media.opengl.GL3;
 
@@ -14,6 +14,7 @@ public class Init extends glsl.GLSLProgramObject {
 
     private int alphaUL;
     private int modelToWorldUL;
+    private int opaqueDepthTexUL;
 
     public Init(GL3 gl3, String shadersFilepath, String vertexShader, String fragmentShader, int blockBinding) {
 
@@ -26,7 +27,9 @@ public class Init extends glsl.GLSLProgramObject {
 
         modelToWorldUL = gl3.glGetUniformLocation(getProgramId(), "modelToWorld");
 
-        if (projectionUBI == -1 || alphaUL == -1 || modelToWorldUL == -1) {
+        opaqueDepthTexUL = gl3.glGetUniformLocation(getProgramId(), "opaqueDepthTex");
+
+        if (projectionUBI == -1 || alphaUL == -1 || modelToWorldUL == -1 || opaqueDepthTexUL == -1) {
             System.out.println("[Init] UL error");
         }
     }
@@ -37,5 +40,9 @@ public class Init extends glsl.GLSLProgramObject {
 
     public int getModelToWorldUL() {
         return modelToWorldUL;
+    }
+
+    public int getOpaqueDepthTexUL() {
+        return opaqueDepthTexUL;
     }
 }

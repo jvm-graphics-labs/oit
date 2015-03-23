@@ -83,8 +83,7 @@ public class DualDepthPeeling implements GLEventListener, KeyListener, MouseList
     public GLSLProgramObject g_shaderWeightedSumFinal;
 
     public float[] g_opacity = new float[]{0.6f};
-//    public char g_mode = DUAL_PEELING_MODE;
-    public char g_mode = F2B_PEELING_MODE;
+    public char g_mode = DUAL_PEELING_MODE;
     public boolean g_showOsd = true;
     public boolean g_bShowUI = true;
     public int g_numGeoPasses = 0;
@@ -625,7 +624,7 @@ public class DualDepthPeeling implements GLEventListener, KeyListener, MouseList
         // ---------------------------------------------------------------------
         // 1. Initialize Min Depth Buffer
         // ---------------------------------------------------------------------
-//        gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, 0);
+
         gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, g_frontColorBlenderFboId[0]);
         gl.glDrawBuffer(g_drawBuffers[0]);
 
@@ -643,8 +642,8 @@ public class DualDepthPeeling implements GLEventListener, KeyListener, MouseList
         // 2. Depth Peeling + Blending
         // ---------------------------------------------------------------------
         int numLayers = (g_numPasses - 1) * 2;
-        g_useOQ = false;
-        for (int layer = 1; g_useOQ || layer < 2; layer++) {
+        
+        for (int layer = 1; g_useOQ || layer < numLayers; layer++) {
             int currId = layer % 2;
             int prevId = 1 - currId;
 
@@ -670,8 +669,7 @@ public class DualDepthPeeling implements GLEventListener, KeyListener, MouseList
             if (g_useOQ) {
                 gl.glEndQuery(GL2.GL_SAMPLES_PASSED);
             }
-            
-//            gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, 0);
+
             gl.glBindFramebuffer(GL2.GL_FRAMEBUFFER, g_frontColorBlenderFboId[0]);
             gl.glDrawBuffer(g_drawBuffers[0]);
 
