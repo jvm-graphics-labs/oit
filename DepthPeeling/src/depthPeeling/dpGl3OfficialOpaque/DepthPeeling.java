@@ -50,6 +50,10 @@ public class DepthPeeling {
 
         initRenderTargets(gl3);
 
+        initSampler(gl3);
+
+        initQuery(gl3);
+
         numGeoPasses = 0;
         numPasses = 4;
         useOQ = true;
@@ -133,9 +137,11 @@ public class DepthPeeling {
                 {
                     gl3.glActiveTexture(GL3.GL_TEXTURE1);
                     gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0]);
+                    gl3.glBindSampler(1, sampler[0]);
                     {
                         scene.renderTransparent(gl3, dpPeel.getModelToWorldUL(), dpPeel.getAlphaUL());
                     }
+                    gl3.glBindSampler(1, 0);
                 }
                 gl3.glBindSampler(0, 0);
                 gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
@@ -193,9 +199,11 @@ public class DepthPeeling {
             {
                 gl3.glActiveTexture(GL3.GL_TEXTURE1);
                 gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, opaqueColorTexId[0]);
+                gl3.glBindSampler(1, sampler[0]);
                 {
                     fullscreenQuad.render(gl3);
                 }
+                gl3.glBindSampler(1, 0);
             }
             gl3.glBindSampler(0, 0);
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
@@ -259,16 +267,6 @@ public class DepthPeeling {
 
     private void initRenderTargets(GL3 gl3) {
         /**
-         * Sampler.
-         */
-        sampler = new int[1];
-        gl3.glGenSamplers(1, sampler, 0);
-
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
-        /**
          * Default Depth Peeling resources.
          */
         depthTexId = new int[2];
@@ -283,16 +281,16 @@ public class DepthPeeling {
 
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, depthTexId[i]);
 
-            gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-            gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
+            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
 
             gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_DEPTH_COMPONENT32F,
                     imageSize.x, imageSize.y, 0, GL3.GL_DEPTH_COMPONENT, GL3.GL_FLOAT, null);
 
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorTexId[i]);
 
-            gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-            gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
+            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
 
             gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA,
                     imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
@@ -308,8 +306,8 @@ public class DepthPeeling {
 
         gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorBlenderTexId[0]);
 
-        gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
 
         gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA,
                 imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
@@ -334,16 +332,16 @@ public class DepthPeeling {
 
         gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0]);
 
-        gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
 
         gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_DEPTH_COMPONENT32F,
                 imageSize.x, imageSize.y, 0, GL3.GL_DEPTH_COMPONENT, GL3.GL_FLOAT, null);
 
         gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, opaqueColorTexId[0]);
 
-        gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL3.GL_TEXTURE_2D, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
 
         gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA,
                 imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
@@ -353,19 +351,10 @@ public class DepthPeeling {
                 GL3.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0], 0);
         gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,
                 GL3.GL_TEXTURE_RECTANGLE, opaqueColorTexId[0], 0);
-        /**
-         * Query.
-         */
-        queryId = new int[1];
-        gl3.glGenQueries(1, queryId, 0);
     }
 
     private void deleteRenderTargets(GL3 gl3) {
 
-        if (sampler != null) {
-            gl3.glDeleteSamplers(sampler.length, sampler, 0);
-            sampler = null;
-        }
         if (fboId != null) {
             gl3.glDeleteFramebuffers(fboId.length, fboId, 0);
             fboId = null;
@@ -386,9 +375,22 @@ public class DepthPeeling {
             gl3.glDeleteTextures(colorBlenderTexId.length, colorBlenderTexId, 0);
             colorBlenderTexId = null;
         }
-        if (queryId != null) {
-            gl3.glDeleteQueries(queryId.length, queryId, 0);
-            queryId = null;
-        }
+    }
+
+    private void initSampler(GL3 gl3) {
+
+        sampler = new int[1];
+        gl3.glGenSamplers(1, sampler, 0);
+
+        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
+        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
+    }
+
+    private void initQuery(GL3 gl3) {
+
+        queryId = new int[1];
+        gl3.glGenQueries(1, queryId, 0);
     }
 }
