@@ -9,14 +9,11 @@
 
 #version 330
 
-uniform sampler2DRect colorTex;
-uniform vec3 backgroundColor;
+layout (location = 0) in vec2 position;
 
-out vec4 outputColor;
+uniform mat4 modelToClip;
 
 void main(void)
 {
-    vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
-    outputColor.rgb = frontColor.rgb + backgroundColor * frontColor.a;
-    outputColor.a = 1;
+     gl_Position = modelToClip * vec4(position, 0.0, 1.0);
 }

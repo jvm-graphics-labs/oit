@@ -7,16 +7,10 @@
 // Copyright (c) NVIDIA Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
-#version 330
-
-uniform sampler2DRect colorTex;
-uniform vec3 backgroundColor;
-
-out vec4 outputColor;
+vec3 ShadeVertex();
 
 void main(void)
 {
-    vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
-    outputColor.rgb = frontColor.rgb + backgroundColor * frontColor.a;
-    outputColor.a = 1;
+	gl_Position = ftransform();
+	gl_TexCoord[0].xyz = ShadeVertex();
 }

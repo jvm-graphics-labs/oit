@@ -10,6 +10,7 @@
 #version 330
 
 uniform sampler2DRect colorTex;
+
 uniform vec3 backgroundColor;
 
 out vec4 outputColor;

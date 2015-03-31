@@ -9,14 +9,11 @@
 
 #version 330
 
-uniform sampler2DRect colorTex;
-uniform vec3 backgroundColor;
+uniform sampler2DRect tempTex;
 
 out vec4 outputColor;
 
 void main(void)
 {
-    vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
-    outputColor.rgb = frontColor.rgb + backgroundColor * frontColor.a;
-    outputColor.a = 1;
+    outputColor = texture(tempTex, gl_FragCoord.xy);
 }
