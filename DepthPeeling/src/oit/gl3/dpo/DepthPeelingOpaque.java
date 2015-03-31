@@ -229,14 +229,16 @@ public class DepthPeelingOpaque {
 
         String shadersFilepath = "/oit/gl3/dpo/glsl/shaders/";
 
-        dpInit = new Init(gl3, shadersFilepath, "init_VS.glsl", "init_FS.glsl", blockBinding);
+        dpInit = new Init(gl3, shadersFilepath, new String[]{"init_VS.glsl", "shade_VS.glsl"},
+                new String[]{"init_FS.glsl", "shade_FS.glsl"}, blockBinding);
         dpInit.bind(gl3);
         {
             gl3.glUniform1i(dpInit.getOpaqueDepthTexUL(), 0);
         }
         dpInit.unbind(gl3);
 
-        dpPeel = new Peel(gl3, shadersFilepath, "peel_VS.glsl", "peel_FS.glsl", blockBinding);
+        dpPeel = new Peel(gl3, shadersFilepath, new String[]{"peel_VS.glsl", "shade_VS.glsl"},
+                new String[]{"peel_FS.glsl", "shade_FS.glsl"}, blockBinding);
         dpPeel.bind(gl3);
         {
             gl3.glUniform1i(dpPeel.getDepthTexUL(), 0);
@@ -299,7 +301,7 @@ public class DepthPeelingOpaque {
                     imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
 
             gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, fboId[i]);
-            
+
             gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_DEPTH_ATTACHMENT,
                     GL3.GL_TEXTURE_RECTANGLE, depthTexId[i], 0);
             gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,
@@ -351,7 +353,7 @@ public class DepthPeelingOpaque {
                 imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
 
         gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, opaqueFboId[0]);
-        
+
         gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_DEPTH_ATTACHMENT,
                 GL3.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0], 0);
         gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,

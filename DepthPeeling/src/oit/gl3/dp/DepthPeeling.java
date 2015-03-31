@@ -204,9 +204,10 @@ public class DepthPeeling {
         String shadersFilepath = "/oit/gl3/dp/glsl/shaders/";
 
         init = new Init(gl3, shadersFilepath, new String[]{"init_VS.glsl", "shade_VS.glsl"},
-                new String[]{"init_FS.glsl"}, blockBinding);
+                new String[]{"init_FS.glsl", "shade_FS.glsl"}, blockBinding);
 
-        peel = new Peel(gl3, shadersFilepath, "peel_VS.glsl", "peel_FS.glsl", blockBinding);
+        peel = new Peel(gl3, shadersFilepath, new String[]{"peel_VS.glsl", "shade_VS.glsl"},
+                new String[]{"peel_FS.glsl", "shade_FS.glsl"}, blockBinding);
         peel.bind(gl3);
         {
             gl3.glUniform1i(peel.getDepthTexUL(), 0);

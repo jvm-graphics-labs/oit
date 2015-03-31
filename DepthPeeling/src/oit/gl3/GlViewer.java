@@ -138,8 +138,8 @@ public class GlViewer implements GLEventListener {
 
         updateCamera(gl3);
 
-//        depthPeelingOpaque.render(gl3, scene);
-        depthPeeling.render(gl3, scene);
+        depthPeelingOpaque.render(gl3, scene);
+//        depthPeeling.render(gl3, scene);
 
         checkError(gl3);
     }
