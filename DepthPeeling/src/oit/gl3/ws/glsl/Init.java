@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package oit.gl3.ddp.glsl;
+package oit.gl3.ws.glsl;
 
 import javax.media.opengl.GL3;
 
@@ -11,8 +11,9 @@ import javax.media.opengl.GL3;
  *
  * @author gbarbieri
  */
-public class Init extends glsl.GLSLProgramObject{
+public class Init extends glsl.GLSLProgramObject {
 
+    private int alphaUL;
     private int modelToWorldUL;
 
     public Init(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders, int blockBinding) {
@@ -22,11 +23,17 @@ public class Init extends glsl.GLSLProgramObject{
         int projectionUBI = gl3.glGetUniformBlockIndex(getProgramId(), "vpMatrixes");
         gl3.glUniformBlockBinding(getProgramId(), projectionUBI, blockBinding);
 
+        alphaUL = gl3.glGetUniformLocation(getProgramId(), "alpha");
+
         modelToWorldUL = gl3.glGetUniformLocation(getProgramId(), "modelToWorld");
 
-        if (projectionUBI == -1 || modelToWorldUL == -1) {
+        if (projectionUBI == -1 || alphaUL == -1 || modelToWorldUL == -1) {
             System.out.println("[Init] UL error");
         }
+    }
+
+    public int getAlphaUL() {
+        return alphaUL;
     }
 
     public int getModelToWorldUL() {

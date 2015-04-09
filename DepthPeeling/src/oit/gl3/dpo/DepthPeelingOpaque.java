@@ -9,6 +9,7 @@ import javax.media.opengl.GL3;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;
+import oit.gl3.FullscreenQuad;
 import oit.gl3.Scene;
 import oit.gl3.dpo.glsl.Blend;
 import oit.gl3.dpo.glsl.Final;
@@ -49,8 +50,6 @@ public class DepthPeelingOpaque {
 
         buildShaders(gl3, blockBinding);
 
-        initRenderTargets(gl3);
-
         initSampler(gl3);
 
         initQuery(gl3);
@@ -78,7 +77,7 @@ public class DepthPeelingOpaque {
 
         dpOpaque.bind(gl3);
         {
-            scene.renderOpaque(gl3, dpOpaque.getModelToWorldUL());
+            scene.renderDpOpaque(gl3, dpOpaque.getModelToWorldUL());
         }
         dpOpaque.unbind(gl3);
         /**

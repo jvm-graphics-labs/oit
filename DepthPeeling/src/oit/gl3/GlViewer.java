@@ -26,7 +26,9 @@ import jglm.Mat4;
 import jglm.Quat;
 import jglm.Vec2i;
 import jglm.Vec3;
+import oit.gl3.ddp.DualDepthPeeling;
 import oit.gl3.dp.DepthPeeling;
+import oit.gl3.ws.WeightedSum;
 
 /**
  *
@@ -40,6 +42,8 @@ public class GlViewer implements GLEventListener {
     private Animator animator;
     private DepthPeelingOpaque depthPeelingOpaque;
     private DepthPeeling depthPeeling;
+    private DualDepthPeeling dualDepthPeeling;
+    private WeightedSum weightedSum;
     private ViewPole viewPole;
     private int[] ubo;
     private MouseListener mouseListener;
@@ -98,8 +102,11 @@ public class GlViewer implements GLEventListener {
 
         initUBO(gl3, blockBinding);
 
-        depthPeelingOpaque = new DepthPeelingOpaque(gl3, imageSize, blockBinding);
         depthPeeling = new DepthPeeling(gl3, imageSize, blockBinding);
+        dualDepthPeeling = new DualDepthPeeling(gl3, imageSize, blockBinding);
+        weightedSum = new WeightedSum(gl3, blockBinding);
+
+        depthPeelingOpaque = new DepthPeelingOpaque(gl3, imageSize, blockBinding);
 
         gl3.glDisable(GL3.GL_CULL_FACE);
 
@@ -138,14 +145,15 @@ public class GlViewer implements GLEventListener {
 
         updateCamera(gl3);
 
-        depthPeelingOpaque.render(gl3, scene);
+//        depthPeelingOpaque.render(gl3, scene);
 //        depthPeeling.render(gl3, scene);
+        weightedSum.render(gl3, scene);
 
         checkError(gl3);
     }
-    
+
     private void updateCamera(GL3 gl3) {
-        
+
         gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, ubo[0]);
         {
             int size = 16 * GLBuffers.SIZEOF_FLOAT;
@@ -173,9 +181,11 @@ public class GlViewer implements GLEventListener {
 
         GL3 gl3 = glad.getGL().getGL3();
 
-        depthPeelingOpaque.reshape(gl3, width, height);
         depthPeeling.reshape(gl3, width, height);
-        
+        weightedSum.reshape(gl3, width, height);
+
+        depthPeelingOpaque.reshape(gl3, width, height);
+
         imageSize = new Vec2i(width, height);
 
         updateProjection(gl3, width, height);
@@ -184,9 +194,9 @@ public class GlViewer implements GLEventListener {
 
         checkError(gl3);
     }
-    
+
     private void updateProjection(GL3 gl3, int width, int height) {
-        
+
         gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, ubo[0]);
         {
             float aspect = (float) width / (float) height;

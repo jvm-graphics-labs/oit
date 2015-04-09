@@ -10,6 +10,7 @@ import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;
 import jglm.Vec3;
+import oit.gl3.FullscreenQuad;
 import oit.gl3.Scene;
 import oit.gl3.dp.glsl.Blend;
 import oit.gl3.dp.glsl.Final;
@@ -46,8 +47,6 @@ public class DepthPeeling {
 
         buildShaders(gl3, blockBinding);
 
-        initRenderTargets(gl3);
-
         initSampler(gl3);
 
         initQuery(gl3);
@@ -77,7 +76,7 @@ public class DepthPeeling {
 
         init.bind(gl3);
         {
-            scene.renderDp(gl3, init.getModelToWorldUL(), init.getAlphaUL());
+            scene.render(gl3, init.getModelToWorldUL(), init.getAlphaUL());
         }
         init.unbind(gl3);
         /**
@@ -120,7 +119,7 @@ public class DepthPeeling {
                 gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, depthTexId[prevId]);
                 gl3.glBindSampler(0, sampler[0]);
                 {
-                    scene.renderDp(gl3, peel.getModelToWorldUL(), peel.getAlphaUL());
+                    scene.render(gl3, peel.getModelToWorldUL(), peel.getAlphaUL());
                 }
                 gl3.glBindSampler(0, 0);
                 gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);

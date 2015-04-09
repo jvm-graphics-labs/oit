@@ -10,6 +10,9 @@
 #version 330
 
 layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+
+smooth out vec3 interpolated;
 
 uniform mat4 modelToWorld;
 
@@ -19,7 +22,10 @@ layout(std140) uniform vpMatrixes  {
     mat4 cameraToClip;
 };
 
-void main(void) 
-{
+vec3 ShadeVertex();
+
+void main(void) {
+
     gl_Position = cameraToClip * worldToCamera * modelToWorld * vec4(position, 1.0);
+    interpolated = ShadeVertex();
 }
