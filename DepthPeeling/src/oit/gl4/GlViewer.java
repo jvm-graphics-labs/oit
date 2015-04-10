@@ -2,9 +2,8 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package oit.gl3;
+package oit.gl4;
 
-import oit.gl3.dpo.DepthPeelingOpaque;
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.util.Animator;
@@ -16,7 +15,7 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.media.opengl.GL3;
+import javax.media.opengl.GL4;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLEventListener;
@@ -26,10 +25,7 @@ import jglm.Mat4;
 import jglm.Quat;
 import jglm.Vec2i;
 import jglm.Vec3;
-import oit.gl3.ddp.DualDepthPeeling;
-import oit.gl3.dp.DepthPeeling;
-import oit.gl3.wa.WeightedAverage;
-import oit.gl3.ws.WeightedSum;
+import oit.gl4.wb.WeightedBlended;
 
 /**
  *
@@ -41,16 +37,12 @@ public class GlViewer implements GLEventListener {
     private GLWindow glWindow;
     private NewtCanvasAWT newtCanvasAWT;
     private Animator animator;
-    private DepthPeelingOpaque depthPeelingOpaque;
-    private DepthPeeling depthPeeling;
-    private DualDepthPeeling dualDepthPeeling;
-    private WeightedSum weightedSum;
-    private WeightedAverage weightedAverage;
     private ViewPole viewPole;
     private int[] ubo;
     private MouseListener mouseListener;
     public static float projectionBase;
     private Scene scene;
+    private WeightedBlended weightedBlended;
 
     public GlViewer() {
 
@@ -81,10 +73,10 @@ public class GlViewer implements GLEventListener {
     public void init(GLAutoDrawable glad) {
         System.out.println("init");
 
-        GL3 gl3 = glad.getGL().getGL3();
+        GL4 gl4 = glad.getGL().getGL4();
 
         try {
-            scene = new Scene(gl3, "/data/dragon.obj");
+            scene = new Scene(gl4, "/data/dragon.obj");
         } catch (IOException ex) {
             Logger.getLogger(GlViewer.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -102,37 +94,32 @@ public class GlViewer implements GLEventListener {
 
         int blockBinding = 0;
 
-        initUBO(gl3, blockBinding);
+        initUBO(gl4, blockBinding);
 
-        depthPeeling = new DepthPeeling(gl3, imageSize, blockBinding);
-        dualDepthPeeling = new DualDepthPeeling(gl3, imageSize, blockBinding);
-        weightedSum = new WeightedSum(gl3, blockBinding);
-        weightedAverage = new WeightedAverage(gl3, blockBinding);
+        weightedBlended = new WeightedBlended(gl4, blockBinding);
 
-        depthPeelingOpaque = new DepthPeelingOpaque(gl3, imageSize, blockBinding);
-
-        gl3.glDisable(GL3.GL_CULL_FACE);
+        gl4.glDisable(GL4.GL_CULL_FACE);
 
         projectionBase = 5000f;
 
         animator.setUpdateFPSFrames(60, System.out);
 
-        checkError(gl3);
+        checkError(gl4);
     }
 
-    private void initUBO(GL3 gl3, int blockBinding) {
+    private void initUBO(GL4 gl4, int blockBinding) {
 
         ubo = new int[1];
         int size = 16 * GLBuffers.SIZEOF_FLOAT;
 
-        gl3.glGenBuffers(1, ubo, 0);
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, ubo[0]);
+        gl4.glGenBuffers(1, ubo, 0);
+        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, ubo[0]);
         {
-            gl3.glBufferData(GL3.GL_UNIFORM_BUFFER, size * 2, null, GL3.GL_DYNAMIC_DRAW);
+            gl4.glBufferData(GL4.GL_UNIFORM_BUFFER, size * 2, null, GL4.GL_DYNAMIC_DRAW);
 
-            gl3.glBindBufferBase(GL3.GL_UNIFORM_BUFFER, blockBinding, ubo[0]);
+            gl4.glBindBufferBase(GL4.GL_UNIFORM_BUFFER, blockBinding, ubo[0]);
         }
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, 0);
+        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
     }
 
     @Override
@@ -144,37 +131,34 @@ public class GlViewer implements GLEventListener {
     public void display(GLAutoDrawable glad) {
 //        System.out.println("display");
 
-        GL3 gl3 = glad.getGL().getGL3();
+        GL4 gl4 = glad.getGL().getGL4();
 
-        updateCamera(gl3);
+        updateCamera(gl4);
 
-//        depthPeelingOpaque.render(gl3, scene);
-//        depthPeeling.render(gl3, scene);
-//        weightedSum.render(gl3, scene);
-        weightedAverage.render(gl3, scene);
+        weightedBlended.render(gl4, scene);
 
-        checkError(gl3);
+        checkError(gl4);
     }
 
-    private void updateCamera(GL3 gl3) {
+    private void updateCamera(GL4 gl4) {
 
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, ubo[0]);
+        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, ubo[0]);
         {
             int size = 16 * GLBuffers.SIZEOF_FLOAT;
             int offset = 0;
 
             FloatBuffer viewMat = GLBuffers.newDirectFloatBuffer(viewPole.calcMatrix().toFloatArray());
 
-            gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, offset, size, viewMat);
+            gl4.glBufferSubData(GL4.GL_UNIFORM_BUFFER, offset, size, viewMat);
         }
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, 0);
+        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
     }
 
-    private void checkError(GL3 gl3) {
+    private void checkError(GL4 gl4) {
 
-        int error = gl3.glGetError();
+        int error = gl4.glGetError();
 
-        if (error != GL3.GL_NO_ERROR) {
+        if (error != GL4.GL_NO_ERROR) {
             System.out.println("error " + error);
         }
     }
@@ -183,26 +167,22 @@ public class GlViewer implements GLEventListener {
     public void reshape(GLAutoDrawable glad, int x, int y, int width, int height) {
         System.out.println("reshape");
 
-        GL3 gl3 = glad.getGL().getGL3();
+        GL4 gl4 = glad.getGL().getGL4();
 
-        depthPeeling.reshape(gl3, width, height);
-        weightedSum.reshape(gl3, width, height);
-        weightedAverage.reshape(gl3, width, height);
-
-        depthPeelingOpaque.reshape(gl3, width, height);
+        weightedBlended.reshape(gl4, width, height);
 
         imageSize = new Vec2i(width, height);
 
-        updateProjection(gl3, width, height);
+        updateProjection(gl4, width, height);
 
-        gl3.glViewport(0, 0, width, height);
+        gl4.glViewport(0, 0, width, height);
 
-        checkError(gl3);
+        checkError(gl4);
     }
 
-    private void updateProjection(GL3 gl3, int width, int height) {
+    private void updateProjection(GL4 gl3, int width, int height) {
 
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, ubo[0]);
+        gl3.glBindBuffer(GL4.GL_UNIFORM_BUFFER, ubo[0]);
         {
             float aspect = (float) width / (float) height;
             int size = 16 * GLBuffers.SIZEOF_FLOAT;
@@ -211,9 +191,9 @@ public class GlViewer implements GLEventListener {
             Mat4 projMat = Jglm.perspective(60f, aspect, 0.0001f, 10);
             FloatBuffer projFB = GLBuffers.newDirectFloatBuffer(projMat.toFloatArray());
 
-            gl3.glBufferSubData(GL3.GL_UNIFORM_BUFFER, offset, size, projFB);
+            gl3.glBufferSubData(GL4.GL_UNIFORM_BUFFER, offset, size, projFB);
         }
-        gl3.glBindBuffer(GL3.GL_UNIFORM_BUFFER, 0);
+        gl3.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
     }
 
     public NewtCanvasAWT getNewtCanvasAWT() {

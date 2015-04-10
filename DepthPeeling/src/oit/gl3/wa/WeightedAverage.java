@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package oit.gl3.ws;
+package oit.gl3.wa;
 
 import oit.gl3.FullscreenQuad;
 import javax.media.opengl.GL3;
@@ -11,14 +11,14 @@ import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;
 import oit.gl3.Scene;
-import oit.gl3.ws.glsl.Final;
-import oit.gl3.ws.glsl.Init;
+import oit.gl3.wa.glsl.Final;
+import oit.gl3.wa.glsl.Init;
 
 /**
  *
  * @author gbarbieri
  */
-public class WeightedSum {
+public class WeightedAverage {
 
     private int[] accumulationFboId;
     private int[] accumulationTexId;
@@ -28,23 +28,23 @@ public class WeightedSum {
     private Final finale;
     private FullscreenQuad fullscreenQuad;
 
-    public WeightedSum(GL3 gl3, int blockBinding) {
+    public WeightedAverage(GL3 gl3, int blockBinding) {
 
         initSampler(gl3);
 
         buildShaders(gl3, blockBinding);
-        
+
         fullscreenQuad = new FullscreenQuad(gl3);
     }
 
     public void render(GL3 gl3, Scene scene) {
-        
+
         gl3.glDisable(GL3.GL_DEPTH_TEST);
         /**
-         * (1) Accumulate (alpha * color) and (alpha).
+         * (1) Accumulate Colors and Depth Complexity.
          */
         gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, accumulationFboId[0]);
-        gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
+        gl3.glDrawBuffers(2, new int[]{GL3.GL_COLOR_ATTACHMENT0, GL3.GL_COLOR_ATTACHMENT1}, 0);
 
         gl3.glClearColor(0, 0, 0, 0);
         gl3.glClear(GL3.GL_COLOR_BUFFER_BIT);
@@ -61,7 +61,7 @@ public class WeightedSum {
 
         gl3.glDisable(GL3.GL_BLEND);
         /**
-         * (2) Weighted Sum.
+         * (2) Approximate Blending.
          */
         gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
         gl3.glDrawBuffer(GL3.GL_BACK);
@@ -74,8 +74,15 @@ public class WeightedSum {
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[0]);
             gl3.glBindSampler(0, sampler[0]);
             {
-                fullscreenQuad.render(gl3);
+                gl3.glActiveTexture(GL3.GL_TEXTURE1);
+                gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[1]);
+                gl3.glBindSampler(1, sampler[0]);
+                {
+                    fullscreenQuad.render(gl3);
+                }
+                gl3.glBindSampler(1, 0);
             }
+            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
             gl3.glBindSampler(0, 0);
         }
         finale.unbind(gl3);
@@ -83,17 +90,18 @@ public class WeightedSum {
 
     private void buildShaders(GL3 gl3, int blockBinding) {
 
-        String shadersFilepath = "/oit/gl3/ws/glsl/shaders/";
+        String shadersFilepath = "/oit/gl3/wa/glsl/shaders/";
 
         init = new Init(gl3, shadersFilepath, new String[]{"init_VS.glsl", "shade_VS.glsl"},
                 new String[]{"init_FS.glsl", "shade_FS.glsl"}, blockBinding);
 
         Mat4 modelToClip = Jglm.orthographic2D(0, 1, 0, 1);
-        
+
         finale = new Final(gl3, shadersFilepath, new String[]{"final_VS.glsl"}, new String[]{"final_FS.glsl"});
         finale.bind(gl3);
         {
-            gl3.glUniform1i(finale.getColorTexUL(), 0);
+            gl3.glUniform1i(finale.getColorTex0UL(), 0);
+            gl3.glUniform1i(finale.getColorTex1UL(), 1);
             gl3.glUniformMatrix4fv(finale.getModelToClipUL(), 1, false, modelToClip.toFloatArray(), 0);
         }
         finale.unbind(gl3);
@@ -109,8 +117,8 @@ public class WeightedSum {
 
     private void initRenderTargets(GL3 gl3) {
 
-        accumulationTexId = new int[1];
-        gl3.glGenTextures(1, accumulationTexId, 0);
+        accumulationTexId = new int[2];
+        gl3.glGenTextures(2, accumulationTexId, 0);
 
         gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[0]);
 
@@ -120,6 +128,14 @@ public class WeightedSum {
         gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA16F,
                 imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
 
+        gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[1]);
+
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+
+        gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_R32F,
+                imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
+
         accumulationFboId = new int[1];
         gl3.glGenFramebuffers(1, accumulationFboId, 0);
 
@@ -127,6 +143,8 @@ public class WeightedSum {
 
         gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,
                 GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[0], 0);
+        gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT1,
+                GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[1], 0);
     }
 
     private void deleteRenderTargets(GL3 gl3) {
