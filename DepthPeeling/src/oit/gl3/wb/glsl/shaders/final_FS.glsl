@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------------------
-// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/base_vertex.glsl
+// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/weighted_blend_fragment.glsl
 // SDK Version: v2.11 
 // Email:       gameworks@nvidia.com
 // Site:        http://developer.nvidia.com/
@@ -32,13 +32,20 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 330
 
-layout (location = 0) in vec3 position;
+layout(location=0) out vec4 outColor;
 
-uniform mat4 modelToClip;
+uniform sampler2DRect ColorTex0;
+uniform sampler2DRect ColorTex1;
+uniform vec3 backgroundColor;
 
 void main(void)
 {
-    gl_Position = modelToClip * vec4(position, 1.0);
+    vec4 sumColor = vec4(texture(ColorTex0, gl_FragCoord.xy).rgb, texture(ColorTex1, gl_FragCoord.xy).r);
+    float transmittance = texture(ColorTex0, gl_FragCoord.xy).a;
+    vec3 averageColor = sumColor.rgb / max(sumColor.a, 0.00001);
+
+    outColor.rgb = averageColor * (1 - transmittance) + backgroundColor * transmittance;
+    outColor.a = 1;
 }

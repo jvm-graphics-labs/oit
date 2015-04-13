@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------------------
-// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/base_vertex.glsl
+// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/weighted_blend_fragment.glsl
 // SDK Version: v2.11 
 // Email:       gameworks@nvidia.com
 // Site:        http://developer.nvidia.com/
@@ -32,13 +32,29 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 330
+#extension ARB_draw_buffers : require
 
-layout (location = 0) in vec3 position;
+uniform float depthScale;
 
-uniform mat4 modelToClip;
+layout (location = 0) out vec4 sumColor;
+layout (location = 1) out vec4 sumWeight;
+
+vec4 ShadeFragment();
 
 void main(void)
 {
-    gl_Position = modelToClip * vec4(position, 1.0);
+    vec4 color = ShadeFragment();
+
+    // Assuming that the projection matrix is a perspective projection
+    // gl_FragCoord.w returns the inverse of the oPos.w register from the vertex shader
+    float viewDepth = abs(1.0 / gl_FragCoord.w);
+
+    // Tuned to work well with FP16 accumulation buffers and 0.001 < linearDepth < 2.5
+    // See Equation (9) from http://jcgt.org/published/0002/02/09/
+    float linearDepth = viewDepth * depthScale;
+    float weight = clamp(0.03 / (1e-5 + pow(linearDepth, 4.0)), 1e-2, 3e3);
+
+    sumColor = vec4(color.rgb * color.a * weight, color.a);
+    sumWeight = vec4(color.a * weight);
 }

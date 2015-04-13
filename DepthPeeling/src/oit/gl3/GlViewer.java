@@ -29,6 +29,7 @@ import jglm.Vec3;
 import oit.gl3.ddp.DualDepthPeeling;
 import oit.gl3.dp.DepthPeeling;
 import oit.gl3.wa.WeightedAverage;
+import oit.gl3.wb.WeightedBlended;
 import oit.gl3.ws.WeightedSum;
 
 /**
@@ -46,6 +47,7 @@ public class GlViewer implements GLEventListener {
     private DualDepthPeeling dualDepthPeeling;
     private WeightedSum weightedSum;
     private WeightedAverage weightedAverage;
+    private WeightedBlended weightedBlended;
     private ViewPole viewPole;
     private int[] ubo;
     private MouseListener mouseListener;
@@ -108,6 +110,7 @@ public class GlViewer implements GLEventListener {
         dualDepthPeeling = new DualDepthPeeling(gl3, imageSize, blockBinding);
         weightedSum = new WeightedSum(gl3, blockBinding);
         weightedAverage = new WeightedAverage(gl3, blockBinding);
+        weightedBlended = new WeightedBlended(gl3, blockBinding);
 
         depthPeelingOpaque = new DepthPeelingOpaque(gl3, imageSize, blockBinding);
 
@@ -151,7 +154,8 @@ public class GlViewer implements GLEventListener {
 //        depthPeelingOpaque.render(gl3, scene);
 //        depthPeeling.render(gl3, scene);
 //        weightedSum.render(gl3, scene);
-        weightedAverage.render(gl3, scene);
+//        weightedAverage.render(gl3, scene);
+        weightedBlended.render(gl3, scene);
 
         checkError(gl3);
     }
@@ -188,6 +192,7 @@ public class GlViewer implements GLEventListener {
         depthPeeling.reshape(gl3, width, height);
         weightedSum.reshape(gl3, width, height);
         weightedAverage.reshape(gl3, width, height);
+        weightedBlended.reshape(gl3, width, height);
 
         depthPeelingOpaque.reshape(gl3, width, height);
 

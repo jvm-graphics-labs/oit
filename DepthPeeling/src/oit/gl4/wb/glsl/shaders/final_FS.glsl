@@ -32,7 +32,7 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 330
+#version 400
 
 layout(location=0) out vec4 outColor;
 
@@ -47,4 +47,5 @@ void main(void)
     vec3 averageColor = sumColor.rgb / max(sumColor.a, 0.00001);
 
     outColor.rgb = averageColor * (1 - transmittance) + backgroundColor * transmittance;
+    outColor.a = 1;
 }

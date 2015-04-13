@@ -32,7 +32,7 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 330
+#version 400
 #extension ARB_draw_buffers : require
 
 uniform float depthScale;

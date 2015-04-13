@@ -26,6 +26,7 @@ import jglm.Quat;
 import jglm.Vec2i;
 import jglm.Vec3;
 import oit.gl4.wb.WeightedBlended;
+import oit.gl4.wbo.WeightedBlendedOpaque;
 
 /**
  *
@@ -43,6 +44,7 @@ public class GlViewer implements GLEventListener {
     public static float projectionBase;
     private Scene scene;
     private WeightedBlended weightedBlended;
+    private WeightedBlendedOpaque weightedBlendedOpaque;
 
     public GlViewer() {
 
@@ -97,6 +99,7 @@ public class GlViewer implements GLEventListener {
         initUBO(gl4, blockBinding);
 
         weightedBlended = new WeightedBlended(gl4, blockBinding);
+        weightedBlendedOpaque = new WeightedBlendedOpaque(gl4, blockBinding);
 
         gl4.glDisable(GL4.GL_CULL_FACE);
 
@@ -136,6 +139,7 @@ public class GlViewer implements GLEventListener {
         updateCamera(gl4);
 
         weightedBlended.render(gl4, scene);
+//        weightedBlendedOpaque.render(gl4, scene);
 
         checkError(gl4);
     }
@@ -170,6 +174,7 @@ public class GlViewer implements GLEventListener {
         GL4 gl4 = glad.getGL().getGL4();
 
         weightedBlended.reshape(gl4, width, height);
+        weightedBlendedOpaque.reshape(gl4, width, height);
 
         imageSize = new Vec2i(width, height);
 

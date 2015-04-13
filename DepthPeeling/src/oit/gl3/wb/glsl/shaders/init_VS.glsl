@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------------------
-// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/base_vertex.glsl
+// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/base_shade_vertex.glsl
 // SDK Version: v2.11 
 // Email:       gameworks@nvidia.com
 // Site:        http://developer.nvidia.com/
@@ -32,13 +32,24 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 330
 
 layout (location = 0) in vec3 position;
 
-uniform mat4 modelToClip;
+smooth out vec3 interpolated;
 
-void main(void)
-{
-    gl_Position = modelToClip * vec4(position, 1.0);
+uniform mat4 modelToWorld;
+
+layout(std140) uniform vpMatrixes  {
+
+    mat4 worldToCamera;
+    mat4 cameraToClip;
+};
+
+vec3 ShadeVertex();
+
+void main(void) {
+
+    gl_Position = cameraToClip * worldToCamera * modelToWorld * vec4(position, 1.0);
+    interpolated = ShadeVertex();
 }
