@@ -77,7 +77,7 @@ public class DepthPeelingOpaque {
 
         dpOpaque.bind(gl3);
         {
-            scene.renderDpOpaque(gl3, dpOpaque.getModelToWorldUL());
+            scene.renderOpaque(gl3, dpOpaque.getModelToWorldUL());
         }
         dpOpaque.unbind(gl3);
         /**
@@ -99,7 +99,7 @@ public class DepthPeelingOpaque {
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0]);
             gl3.glBindSampler(0, sampler[0]);
             {
-                scene.renderDpoTransparent(gl3, dpInit.getModelToWorldUL(), dpInit.getAlphaUL());
+                scene.renderTransparent(gl3, dpInit.getModelToWorldUL(), dpInit.getAlphaUL());
             }
             gl3.glBindSampler(0, 0);
             gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
@@ -141,7 +141,7 @@ public class DepthPeelingOpaque {
                     gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0]);
                     gl3.glBindSampler(1, sampler[0]);
                     {
-                        scene.renderDpoTransparent(gl3, dpPeel.getModelToWorldUL(), dpPeel.getAlphaUL());
+                        scene.renderTransparent(gl3, dpPeel.getModelToWorldUL(), dpPeel.getAlphaUL());
                     }
                     gl3.glBindSampler(1, 0);
                 }

@@ -24,13 +24,13 @@ public class Scene {
 
         model = new Model(gl3, filepath);
 
-        Mat4 m0 = Mat4.translate(new Vec3(0f, 0f, 0f));
+//        Mat4 m0 = Mat4.translate(new Vec3(0f, 0f, 0f));
 
-//        Mat4 m0 = Mat4.translate(new Vec3(.1f, 0f, 0f));
-//        Mat4 m1 = Mat4.translate(new Vec3(-.1f, 0f, 0f));
-//        Mat4 m2 = Mat4.translate(new Vec3(0f, 0f, .1f));
-//        Mat4 m3 = Mat4.translate(new Vec3(0f, 0f, -.1f));
-//        Mat4 m4 = Mat4.translate(new Vec3(.1f, .2f, 0f));
+        Mat4 m0 = Mat4.translate(new Vec3(.1f, 0f, 0f));
+        Mat4 m1 = Mat4.translate(new Vec3(-.1f, 0f, 0f));
+        Mat4 m2 = Mat4.translate(new Vec3(0f, 0f, .1f));
+        Mat4 m3 = Mat4.translate(new Vec3(0f, 0f, -.1f));
+        Mat4 m4 = Mat4.translate(new Vec3(.1f, .2f, 0f));
 //        Mat4 m5 = Mat4.translate(new Vec3(-.1f, .2f, 0f));
 //        Mat4 m6 = Mat4.translate(new Vec3(0f, .2f, .1f));
 //        Mat4 m7 = Mat4.translate(new Vec3(0f, .2f, -.1f));
@@ -39,11 +39,11 @@ public class Scene {
 //        Mat4 m9 = Mat4.translate(new Vec3(-.1f, -.2f, 0f));
 //        Mat4 m10 = Mat4.translate(new Vec3(0f, -.2f, .1f));
 //        Mat4 m11 = Mat4.translate(new Vec3(0f, -.2f, -.1f));
-        positions = new Mat4[]{m0};
-//        positions = new Mat4[]{m0, m1, m2, m3};
+//        positions = new Mat4[]{m0};
+        positions = new Mat4[]{m0, m1, m2, m3};
 //        positions = new Mat4[]{m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11};
-        opacities = new float[]{.6f};
-//        opacities = new float[]{1f, 1f, .6f, .6f};
+//        opacities = new float[]{.6f};
+        opacities = new float[]{1f, 1f, .6f, .6f};
 //        opacities = new float[]{1f, 1f, .6f, .6f, 1f, 1f, .6f, .6f, 1f, 1f, .6f, .6f};
     }
 
@@ -58,7 +58,7 @@ public class Scene {
         }
     }
 
-    public void renderDpOpaque(GL3 gl3, int modelMatrixUL) {
+    public void renderOpaque(GL3 gl3, int modelMatrixUL) {
 
         for (int i = 0; i < positions.length; i++) {
 
@@ -71,7 +71,7 @@ public class Scene {
         }
     }
 
-    public void renderDpoTransparent(GL3 gl3, int modelMatrixUL, int alphaUL) {
+    public void renderTransparent(GL3 gl3, int modelMatrixUL, int alphaUL) {
 
         for (int i = 0; i < positions.length; i++) {
 
