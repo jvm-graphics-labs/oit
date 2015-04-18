@@ -5,8 +5,8 @@
  */
 package oit.gl4;
 
+import com.jogamp.opengl.GL4;
 import java.io.IOException;
-import javax.media.opengl.GL4;
 import jglm.Mat4;
 import jglm.Vec3;
 

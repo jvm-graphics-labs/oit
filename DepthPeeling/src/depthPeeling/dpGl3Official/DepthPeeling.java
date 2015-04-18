@@ -5,11 +5,11 @@
  */
 package depthPeeling.dpGl3Official;
 
+import com.jogamp.opengl.GL3;
 import depthPeeling.dpGl3Official.glsl.Blend;
 import depthPeeling.dpGl3Official.glsl.Final;
 import depthPeeling.dpGl3Official.glsl.Init;
 import depthPeeling.dpGl3Official.glsl.Peel;
-import javax.media.opengl.GL3;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;

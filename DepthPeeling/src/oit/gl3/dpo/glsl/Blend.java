@@ -4,7 +4,7 @@
  */
 package oit.gl3.dpo.glsl;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 /**
  *
@@ -20,10 +20,10 @@ public class Blend extends glsl.GLSLProgramObject {
         super(gl3, shadersFilepath, vertexShader, fragmentShader);
 
         modelToClipUL = gl3.glGetUniformLocation(getProgramId(), "modelToClip");
-        
+
         tempTexUL = gl3.glGetUniformLocation(getProgramId(), "tempTex");
-        
-        if (modelToClipUL == -1 || tempTexUL == -1 ) {
+
+        if (modelToClipUL == -1 || tempTexUL == -1) {
             System.out.println("[Blend] UL error");
         }
     }

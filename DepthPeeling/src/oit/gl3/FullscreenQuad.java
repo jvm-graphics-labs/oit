@@ -5,10 +5,9 @@
  */
 package oit.gl3;
 
-import oit.gl3.dp.*;
+import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import java.nio.FloatBuffer;
-import javax.media.opengl.GL3;
 
 /**
  *
