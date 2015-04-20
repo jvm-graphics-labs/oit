@@ -7,6 +7,7 @@ package oit.gl3;
 
 import oit.gl3.dpo.DepthPeelingOpaque;
 import com.jogamp.common.nio.Buffers;
+import com.jogamp.opengl.GL3;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -16,7 +17,6 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import javax.media.opengl.GL3;
 import jglm.Vec3;
 
 /**

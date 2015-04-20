@@ -5,8 +5,8 @@
  */
 package oit.gl3.ws;
 
+import com.jogamp.opengl.GL3;
 import oit.gl3.FullscreenQuad;
-import javax.media.opengl.GL3;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;

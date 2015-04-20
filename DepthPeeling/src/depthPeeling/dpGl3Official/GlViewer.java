@@ -6,6 +6,11 @@ package depthPeeling.dpGl3Official;
 
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
+import com.jogamp.opengl.GL3;
+import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLBuffers;
 import glutil.ViewData;
@@ -15,11 +20,6 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.media.opengl.GL3;
-import javax.media.opengl.GLAutoDrawable;
-import javax.media.opengl.GLCapabilities;
-import javax.media.opengl.GLEventListener;
-import javax.media.opengl.GLProfile;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Quat;
@@ -98,7 +98,7 @@ public class GlViewer implements GLEventListener {
         depthPeeling = new DepthPeeling(gl3, imageSize, blockBinding);
 
         gl3.glDisable(GL3.GL_CULL_FACE);
-        
+
         projectionBase = 5000f;
 
         checkError(gl3);

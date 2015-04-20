@@ -5,17 +5,17 @@
  */
 package oit.gl3.ddp.glsl;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 /**
  *
  * @author gbarbieri
  */
-public class Peel extends glsl.GLSLProgramObject{
+public class Peel extends glsl.GLSLProgramObject {
 
     public Peel(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders) {
-        
+
         super(gl3, shadersFilepath, vertexShaders, fragmentShaders);
     }
-    
+
 }

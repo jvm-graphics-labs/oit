@@ -5,13 +5,13 @@
  */
 package oit.gl3.ddp.glsl;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 /**
  *
  * @author gbarbieri
  */
-public class Init extends glsl.GLSLProgramObject{
+public class Init extends glsl.GLSLProgramObject {
 
     private int modelToWorldUL;
 

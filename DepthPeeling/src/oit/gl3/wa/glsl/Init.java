@@ -1,3 +1,4 @@
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -5,7 +6,7 @@
  */
 package oit.gl3.wa.glsl;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 /**
  *
