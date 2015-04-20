@@ -1,3 +1,4 @@
+
 /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
@@ -141,7 +142,6 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
 //        System.err.println("   GL_VERSION_3_2: "+gl2.isExtensionAvailable("GL_VERSION_3_2"));
 //        System.err.println("   GL_VERSION_3_3: "+gl2.isExtensionAvailable("GL_VERSION_3_3"));
 //        System.err.println("   GL_VERSION_4_0: "+gl2.isExtensionAvailable("GL_VERSION_4_0"));
-        
         initDepthPeelingRenderTargets(gl2);
         gl2.glBindFramebuffer(GL2.GL_FRAMEBUFFER, 0);
 
@@ -347,7 +347,6 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
 
             gl2.glTexImage2D(GL2.GL_TEXTURE_RECTANGLE_ARB, 0, GL2.GL_DEPTH_COMPONENT32F, imageWidth, imageHeight, 0, GL2.GL_DEPTH_COMPONENT, GL2.GL_FLOAT, null);
 
-
             gl2.glBindTexture(GL2.GL_TEXTURE_RECTANGLE_ARB, colorTextureId[i]);
 
             gl2.glTexParameteri(GL2.GL_TEXTURE_RECTANGLE_ARB, GL2.GL_TEXTURE_WRAP_S, GL2.GL_CLAMP);
@@ -356,7 +355,6 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
             gl2.glTexParameteri(GL2.GL_TEXTURE_RECTANGLE_ARB, GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_NEAREST);
 
             gl2.glTexImage2D(GL2.GL_TEXTURE_RECTANGLE_ARB, 0, GL2.GL_RGBA, imageWidth, imageHeight, 0, GL2.GL_RGBA, GL2.GL_FLOAT, null);
-
 
             gl2.glBindFramebuffer(GL2.GL_FRAMEBUFFER, fboId[i]);
 
@@ -403,7 +401,7 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
 
     @Override
     public void display(GLAutoDrawable glad) {
-        System.out.println("display, passesNumber: "+passesNumber);
+        System.out.println("display, passesNumber: " + passesNumber);
 
         GL2 gl2 = glad.getGL().getGL2();
         GLU glu = GLU.createGLU(gl2);
@@ -424,7 +422,6 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
 //        gl2.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
 //        gl2.glColor3f(0.5f, 0.5f, 0.5f);
 //        drawModel(gl2);
-
         glad.swapBuffers();
     }
 
@@ -454,7 +451,7 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
         int layersNumber = (passesNumber - 1) * 2;
 //        System.out.println("layersNumber: " + layersNumber);
         for (int layer = 1; layer < layersNumber; layer++) {
-            
+
             int currentId = layer % 2;
             int previousId = 1 - currentId;
 
@@ -519,39 +516,37 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
         int vertexStride = 3 * 2 * 4;
         int vertexPointer = 0;
         int normalPointer = 3 * 4;
-        
+
         //  Enable lighting
 //        gl2.glEnable(GL2.GL_LIGHTING);
 //        gl2.glEnable(GL2.GL_LIGHT0);
+        //  Enable client-side vertex capability
+        gl2.glEnableClientState(GL2.GL_VERTEX_ARRAY);
 
-            //  Enable client-side vertex capability
-            gl2.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+        //  Enable client-side normal capability
+        gl2.glEnableClientState(GL2.GL_NORMAL_ARRAY);
 
-            //  Enable client-side normal capability
-            gl2.glEnableClientState(GL2.GL_NORMAL_ARRAY);
+        //  Select the primitive buffer
+        gl2.glBindBuffer(GL2.GL_ARRAY_BUFFER, primitiveDataBufferID[0]);
 
-            //  Select the primitive buffer
-            gl2.glBindBuffer(GL2.GL_ARRAY_BUFFER, primitiveDataBufferID[0]);
+        //  Specify the vertex layout format
+        gl2.glVertexPointer(3, GL2.GL_FLOAT, vertexStride, vertexPointer);
 
-            //  Specify the vertex layout format
-            gl2.glVertexPointer(3, GL2.GL_FLOAT, vertexStride, vertexPointer);
+        //  Specify the normal layout format
+        gl2.glNormalPointer(GL2.GL_FLOAT, vertexStride, normalPointer);
 
-            //  Specify the normal layout format
-            gl2.glNormalPointer(GL2.GL_FLOAT, vertexStride, normalPointer);
+        //  Render, passing the vertex number
+        gl2.glDrawArrays(GL2.GL_TRIANGLES, 0, triangles.size() * 3);
 
-            //  Render, passing the vertex number
-            gl2.glDrawArrays(GL2.GL_TRIANGLES, 0, triangles.size() * 3);
+        //  Disable client-side vertex capability
+        gl2.glDisableClientState(GL2.GL_VERTEX_ARRAY);
 
-            //  Disable client-side vertex capability
-            gl2.glDisableClientState(GL2.GL_VERTEX_ARRAY);
+        //  Disable client-side normal capability
+        gl2.glDisableClientState(GL2.GL_NORMAL_ARRAY);
 
-            //  Disable client-side normal capability
-            gl2.glDisableClientState(GL2.GL_NORMAL_ARRAY);
-        
         //  Disable lighting
 //        gl2.glDisable(GL2.GL_LIGHT0);
 //        gl2.glDisable(GL2.GL_LIGHTING);
-
         geoPassesNumber++;
     }
 
@@ -605,7 +600,7 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
                 passesNumber++;
                 break;
         }
-        
+
         gLCanvas.display();
     }
 

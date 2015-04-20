@@ -7,7 +7,6 @@ package oit.gl4.wb.glsl;
 
 import com.jogamp.opengl.GL4;
 
-
 /**
  *
  * @author gbarbieri

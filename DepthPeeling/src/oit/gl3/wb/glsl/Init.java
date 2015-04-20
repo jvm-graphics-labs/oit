@@ -7,7 +7,6 @@ package oit.gl3.wb.glsl;
 
 import com.jogamp.opengl.GL3;
 
-
 /**
  *
  * @author gbarbieri
