@@ -5,7 +5,7 @@
  */
 package oit.gl3.dpo;
 
-import com.jogamp.opengl.GL3;
+import javax.media.opengl.GL3;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;

@@ -6,7 +6,7 @@
  */
 package oit.gl3.wa.glsl;
 
-import com.jogamp.opengl.GL3;
+import javax.media.opengl.GL3;
 
 /**
  *

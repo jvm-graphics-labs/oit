@@ -5,7 +5,7 @@
  */
 package oit.gl3.ddp;
 
-import com.jogamp.opengl.GL3;
+import javax.media.opengl.GL3;
 import jglm.Vec2i;
 import oit.gl3.Scene;
 import oit.gl3.ddp.glsl.Init;

@@ -6,7 +6,7 @@
 package oit.gl4;
 
 import com.jogamp.common.nio.Buffers;
-import com.jogamp.opengl.GL4;
+import javax.media.opengl.GL4;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;

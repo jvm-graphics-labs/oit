@@ -5,7 +5,7 @@
  */
 package depthPeeling.dpGl3Official;
 
-import com.jogamp.opengl.GL3;
+import javax.media.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import java.nio.FloatBuffer;
 

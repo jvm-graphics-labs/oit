@@ -4,7 +4,7 @@
  */
 package depthPeeling.dpGl3Official.glsl;
 
-import com.jogamp.opengl.GL3;
+import javax.media.opengl.GL3;
 
 /**
  *

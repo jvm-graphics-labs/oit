@@ -9,7 +9,7 @@ package oit.bavoilMyers;
 //
 // Copyright (c) NVIDIA Corporation. All rights reserved.
 ////////////////////////////////////////////////////////////////////////////////
-import com.jogamp.opengl.GL2;
+import javax.media.opengl.GL2;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;

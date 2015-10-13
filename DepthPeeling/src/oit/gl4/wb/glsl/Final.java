@@ -5,7 +5,7 @@
  */
 package oit.gl4.wb.glsl;
 
-import com.jogamp.opengl.GL4;
+import javax.media.opengl.GL4;
 
 /**
  *

@@ -5,7 +5,7 @@
  */
 package oit.gl4.wbo;
 
-import com.jogamp.opengl.GL4;
+import javax.media.opengl.GL4;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;

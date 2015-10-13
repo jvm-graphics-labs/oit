@@ -6,7 +6,7 @@
 package depthPeeling.dpGl3Official;
 
 import com.jogamp.common.nio.Buffers;
-import com.jogamp.opengl.GL3;
+import javax.media.opengl.GL3;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;

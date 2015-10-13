@@ -11,17 +11,17 @@ import java.awt.event.WindowEvent;
 
 
 import com.jogamp.common.nio.Buffers;
-import com.jogamp.opengl.DebugGL2;
-import com.jogamp.opengl.GL;
-import com.jogamp.opengl.GL2;
-import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLCapabilities;
-import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.GLException;
-import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.glu.GLU;
+import javax.media.opengl.DebugGL2;
+import javax.media.opengl.GL;
+import javax.media.opengl.GL2;
+import javax.media.opengl.GLAutoDrawable;
+import javax.media.opengl.GLCapabilities;
+import javax.media.opengl.GLEventListener;
+import javax.media.opengl.GLException;
+import javax.media.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
+import javax.media.opengl.awt.GLCanvas;
+import javax.media.opengl.glu.GLU;
 
 // Translated from C++ Version see below:
 //--------------------------------------------------------------------------------------
