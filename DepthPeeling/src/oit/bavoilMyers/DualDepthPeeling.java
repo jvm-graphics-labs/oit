@@ -63,8 +63,8 @@ public class DualDepthPeeling implements GLEventListener, KeyListener, MouseList
     public boolean g_useOQ = true;
     public int[] g_queryId = new int[1];
 
-    public String MODEL_FILENAME = new String("/depthPeeling/original/dualDepthPeeling/media/models/dragon.obj");
-    public static String SHADER_PATH = new String("/depthPeeling/original/dualDepthPeeling/shaders/");
+    public String MODEL_FILENAME = new String("/data/dragon.obj");
+    public static String SHADER_PATH = new String("/oit/bavoilMyers/shaders/");
 
     public GLSLProgramObject g_shaderDualInit;
     public GLSLProgramObject g_shaderDualPeel;

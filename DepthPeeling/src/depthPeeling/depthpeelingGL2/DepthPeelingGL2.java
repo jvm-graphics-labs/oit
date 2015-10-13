@@ -56,7 +56,7 @@ public class DepthPeelingGL2 implements GLEventListener, KeyListener, MouseListe
     private boolean scaling = false;
 //    private float[] rot = new 
 //    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\Frontlader5_3.stl";
-    private String filename = "/depthPeeling/data/Frontlader5.stl";
+    private String filename = "/data/Frontlader5.stl";
 //    private String filename = "C:\\Users\\gbarbieri\\Documents\\Models\\ATLAS_RADLADER.stl";
 //    private String filename = "C:\\temp\\model.stl";
     private float[] min = new float[3];

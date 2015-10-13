@@ -39,12 +39,6 @@ layout (location = 1) in vec3 normal;
 
 uniform mat4 modelToWorld;
 
-layout(std140) uniform vpMatrixes  {
-
-    mat4 worldToCamera;
-    mat4 cameraToClip;
-};
-
 vec3 ShadeVertex()
 {
 	float diffuse = abs(normalize(mat3(modelToWorld) * normal).z);

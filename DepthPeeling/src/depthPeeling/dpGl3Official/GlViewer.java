@@ -75,7 +75,7 @@ public class GlViewer implements GLEventListener {
         GL3 gl3 = glad.getGL().getGL3();
 
         try {
-            model = new Model(gl3, "/depthPeeling/data/dragon.obj");
+            model = new Model(gl3, "/data/dragon.obj");
         } catch (IOException ex) {
             Logger.getLogger(GlViewer.class.getName()).log(Level.SEVERE, null, ex);
         }

@@ -134,24 +134,24 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         System.out.println("init");
 
         glWindow.setAutoSwapBufferMode(false);
-
+        
         GL3 gl3 = glad.getGL().getGL3();
 
         int projectionBlockBinding = 0;
 
         ViewData initialViewData = new ViewData(new Vec3(0.0f, 0.0f, 0.0f), new Quat(0.0f, 0.0f, 0.0f, 1.0f), 50.0f, 0.0f);
-
+        
         ViewScale viewScale = new ViewScale(3.0f, 20.0f, 1.5f, 0.5f, 0.0f, 0.0f, 90.0f / 250.0f);
 
         viewPole = new ViewPole(initialViewData, viewScale, ViewPole.Projection.orthographic);
 
         initUBO(gl3, projectionBlockBinding);
-
+        
         initDepthPeelingRenderTargets(gl3);
         gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
-
+        
         readAsciiStl(gl3);
-
+        
         buildShaders(gl3, projectionBlockBinding);
 
         initFullScreenQuad(gl3);
@@ -241,7 +241,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
 
         initFloorVAO(gl3);
 
-        URL url = getClass().getResource("/depthPeeling/data/floor.png");
+        URL url = getClass().getResource("/data/floor.png");
 
         try {
             floorTexture = TextureIO.newTexture(new File(url.getPath()), true);
@@ -320,12 +320,13 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
     }
 
     private void readAsciiStl(GL3 gl3) {
+        
         try {
             FileReader fr;
             int vertexLocal = 0;
             int attributesGlobal = 0;
 
-            URL url = getClass().getResource("/depthPeeling/data/frontlader5.stl");
+            URL url = getClass().getResource("/data/frontlader5.stl");
 
             fr = new FileReader(new File(url.getPath()));
             BufferedReader br = new BufferedReader(fr);
@@ -584,7 +585,7 @@ public class DepthPeelingGL3 implements GLEventListener, KeyListener, MouseListe
         int layersNumber = (passesNumber - 1) * 2;
 //        System.out.println("layersNumber: " + layersNumber);
         for (int layer = 1; layer < layersNumber; layer++) {
-            System.out.println("layer " + layer);
+//            System.out.println("layer " + layer);
             int currentId = layer % 2;
             int previousId = 1 - currentId;
 
