@@ -9,7 +9,7 @@ It requires:
 - the java unofficial opengl SDK https://github.com/elect86/java-unofficial-opengl-SDK
 
 
-[depthPeeling](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/depthPeeling) package represents some earlier attempts of mine
+[`depthPeeling`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/depthPeeling) package represents some earlier attempts of mine
 
 What it is important is the `oit` one, (Order Independent Transparency).
 
