@@ -5,7 +5,7 @@
  */
 package depthPeeling.dpGl3Official;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 import depthPeeling.dpGl3Official.glsl.Blend;
 import depthPeeling.dpGl3Official.glsl.Final;
 import depthPeeling.dpGl3Official.glsl.Init;

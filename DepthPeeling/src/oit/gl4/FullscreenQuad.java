@@ -5,7 +5,7 @@
  */
 package oit.gl4;
 
-import javax.media.opengl.GL4;
+import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.util.GLBuffers;
 import java.nio.FloatBuffer;
 
