@@ -13,7 +13,7 @@ It requires:
 
 What it is important is the [`oit`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit) one, (Order Independent Transparency).
 
-Inside you can find under `oit.originalBavoilMyers` the original program of Louis Bavoil and Kevin Myers, they work is the ["Order Independent Transparency with Dual Depth Peeling"](http://developer.download.nvidia.com/SDK/10/opengl/src/dual_depth_peeling/doc/DualDepthPeeling.pdf) paper. I have slighlty modified it, just the minimum to get it working.
+Inside you can find under [`originalBavoilMyers`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit/originalBavoilMyers) the original program of Louis Bavoil and Kevin Myers, they work is the ["Order Independent Transparency with Dual Depth Peeling"](http://developer.download.nvidia.com/SDK/10/opengl/src/dual_depth_peeling/doc/DualDepthPeeling.pdf) paper. I have slighlty modified it, just the minimum to get it working.
 
 Package `oit.gl3` is instead my current (partial) `GL3` rewriting, I divided all the different methods of their program in order to make it more readable, as following:
 
