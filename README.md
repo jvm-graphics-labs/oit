@@ -9,7 +9,11 @@ It requires:
 - the java unofficial opengl SDK https://github.com/elect86/java-unofficial-opengl-SDK
 
 
-depthPeeling and depthPeelingGL3 are some test versions
+`depthPeeling` package represents some earlier attempts of mine
+
+What it is important is the `oit` one, (Order Independent Transparency).
+
+Inside you can find the original program of Louis Bavoil and Kevin Myers, here the ["Order Independent Transparency with Dual Depth Peeling"](http://developer.download.nvidia.com/SDK/10/opengl/src/dual_depth_peeling/doc/DualDepthPeeling.pdf) paper.
 
 original.dualDepthPeeling is the original version of Louis Bavoil
 
