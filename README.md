@@ -15,7 +15,7 @@ What it is important is the [`oit`](https://github.com/elect86/depthPeeling/tree
 
 Inside you can find under [`originalBavoilMyers`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit/originalBavoilMyers) the original program of Louis Bavoil and Kevin Myers, they work is the ["Order Independent Transparency with Dual Depth Peeling"](http://developer.download.nvidia.com/SDK/10/opengl/src/dual_depth_peeling/doc/DualDepthPeeling.pdf) paper. I have slighlty modified it, just the minimum to get it working.
 
-Package `oit.gl3` is instead my current (partial) `GL3` rewriting, I divided all the different methods of their program in order to make it more readable, as following:
+Package [`gl3`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit/gl3) is instead my current (partial) `GL3` rewriting, I divided all the different methods of their program in order to make it more readable, as following:
 
 - `ddp` standard Dual Depth Peeling
 - `dp` standard Depth Peeling 
@@ -29,5 +29,5 @@ The newest algorithm of all is the Weighted Blended, OIT much faster! Here some 
 - [Full-Text High-Resolution PDF](http://jcgt.org/published/0002/02/09/paper.pdf)
 - [Nvidia Weighted Blended OIT Sample](http://docs.nvidia.com/gameworks/content/gameworkslibrary/graphicssamples/opengl_samples/weightedblendedoitsample.htm), Graphics and Compute Samples
 
-If you have `GL4`, you can look for the fastest standard `oit.gl4.wb` algorithm or, otherwise, you can still implement in `GL3` at a small addition cost, `oit.gl3.wb`.
+If you have `GL4`, you can look for the fastest standard `wb` algorithm in the [`gl4`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit/gl4) package or, otherwise, you can still implement in `GL3` at a small addition cost, `oit.gl3.wb`.
 Both `wbo` versions refers to the corresponding optimized algorithm that renders first opaque meshes.
