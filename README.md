@@ -1,7 +1,7 @@
-depthPeeling
+OIT
 ============
 
-Repository containing JOGL examples regarding the Depth Peeling technique on old (GL2) and modern (GL3/GL4) OpenGL
+Repository containing JOGL examples regarding the OIT techniques on old (GL2) and modern (GL3/GL4) OpenGL
 
 It requires:
 
