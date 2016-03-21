@@ -22,10 +22,16 @@ layout(std140) uniform vpMatrixes  {
 
 smooth out vec3 interpolated;
 
-vec3 ShadeVertex();
+vec3 shade();
 
 void main(void) {
 
     gl_Position = cameraToClip * worldToCamera * modelToWorld * vec4(position, 1.0);
-    interpolated = ShadeVertex();
+    interpolated = shade();
+}
+
+vec3 shade()
+{
+    float diffuse = abs(normalize(mat3(modelToWorld) * normal).z);
+    return vec3(position.xy, diffuse);
 }

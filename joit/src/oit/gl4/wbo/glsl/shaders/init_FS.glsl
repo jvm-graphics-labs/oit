@@ -35,6 +35,13 @@
 #version 400
 #extension ARB_draw_buffers : require
 
+#define COLOR_FREQ 30.0
+#define ALPHA_FREQ 30.0
+
+smooth in vec3 interpolated;
+
+uniform float alpha;
+
 uniform sampler2DRect opaqueDepthTex;
 
 uniform float depthScale;
@@ -42,7 +49,7 @@ uniform float depthScale;
 layout (location = 0) out vec4 sumColor;
 layout (location = 1) out vec4 sumWeight;
 
-vec4 ShadeFragment();
+vec4 shade();
 
 void main(void)
 {
@@ -52,7 +59,7 @@ void main(void)
         discard;
     }
 
-    vec4 color = ShadeFragment();
+    vec4 color = shade();
 
     // Assuming that the projection matrix is a perspective projection
     // gl_FragCoord.w returns the inverse of the oPos.w register from the vertex shader
@@ -66,3 +73,30 @@ void main(void)
     sumColor = vec4(color.rgb * color.a, color.a) * weight;
     sumWeight = vec4(color.a);
 }
+
+#if 1
+vec4 shade()
+{
+    float xWorldPos = interpolated.x;
+    float yWorldPos = interpolated.y;
+    float diffuse = interpolated.z;
+
+    vec4 color;
+    float i = floor(xWorldPos * COLOR_FREQ);
+    float j = floor(yWorldPos * ALPHA_FREQ);
+    color.rgb = (mod(i, 2.0) == 0) ? vec3(.4,.85,.0) : vec3(1.0);
+    //color.a = (mod(j, 2.0) == 0) ? alpha : 0.2;
+    color.a = alpha;
+
+    color.rgb *= diffuse;
+    return color;
+}
+#else
+vec4 shade()
+{
+    vec4 color;
+    color.rgb = vec3(.4,.85,.0);
+    color.a = alpha;
+    return color;
+}
+#endif

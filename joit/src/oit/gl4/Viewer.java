@@ -4,11 +4,18 @@
  */
 package oit.gl4;
 
+import com.jogamp.newt.Display;
+import com.jogamp.newt.NewtFactory;
+import com.jogamp.newt.Screen;
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
+import static com.jogamp.opengl.GL.GL_DONT_CARE;
+import static com.jogamp.opengl.GL2ES2.GL_DEBUG_SEVERITY_HIGH;
+import static com.jogamp.opengl.GL2ES2.GL_DEBUG_SEVERITY_MEDIUM;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
@@ -32,55 +39,58 @@ import oit.gl4.wbo.WeightedBlendedOpaque;
  *
  * @author gbarbieri
  */
-public class GlViewer implements GLEventListener {
+public class Viewer implements GLEventListener {
 
-    private Vec2i imageSize;
-    private GLWindow glWindow;
-    private NewtCanvasAWT newtCanvasAWT;
-    private Animator animator;
+    public static Vec2i imageSize = new Vec2i(1024, 768);
+    public static GLWindow glWindow;
+    public static Animator animator;
+    
+
+    public static void main(String[] args) {
+
+        Display display = NewtFactory.createDisplay(null);
+        Screen screen = NewtFactory.createScreen(display, 0);
+        GLProfile glProfile = GLProfile.get(GLProfile.GL4);
+        GLCapabilities glCapabilities = new GLCapabilities(glProfile);
+        glWindow = GLWindow.create(screen, glCapabilities);
+
+        glWindow.setSize(imageSize.x, imageSize.y);
+        glWindow.setPosition(50, 50);
+        glWindow.setUndecorated(false);
+        glWindow.setAlwaysOnTop(false);
+        glWindow.setFullscreen(false);
+        glWindow.setPointerVisible(true);
+        glWindow.confinePointer(false);
+        glWindow.setTitle("Weighted Blended");
+        glWindow.setContextCreationFlags(GLContext.CTX_OPTION_DEBUG);
+        glWindow.setVisible(true);
+
+        Viewer viewer = new Viewer();
+        glWindow.addGLEventListener(viewer);
+
+        animator = new Animator(glWindow);
+        animator.start();
+    }
+    
     private ViewPole viewPole;
     private int[] ubo;
-    private MouseListener mouseListener;
+    private InputListener inputListener;
     public static float projectionBase;
     private Scene scene;
     private WeightedBlended weightedBlended;
     private WeightedBlendedOpaque weightedBlendedOpaque;
 
-    public GlViewer() {
-
-        imageSize = new Vec2i(1024, 768);
-
-        initGL();
-    }
-
-    private void initGL() {
-
-        GLProfile gLProfile = GLProfile.getDefault();
-
-        GLCapabilities gLCapabilities = new GLCapabilities(gLProfile);
-
-        glWindow = GLWindow.create(gLCapabilities);
-
-        newtCanvasAWT = new NewtCanvasAWT(glWindow);
-
-        glWindow.setSize(imageSize.x, imageSize.y);
-
-        glWindow.addGLEventListener(this);
-
-        animator = new Animator(glWindow);
-        animator.start();
-    }
-
     @Override
     public void init(GLAutoDrawable glad) {
-        System.out.println("init");
 
         GL4 gl4 = glad.getGL().getGL4();
+        
+        initDebug(gl4);
 
         try {
             scene = new Scene(gl4, "/data/dragon.obj");
         } catch (IOException ex) {
-            Logger.getLogger(GlViewer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         Vec3 target = new Vec3(0f, .12495125f, 0f);
@@ -91,8 +101,9 @@ public class GlViewer implements GLEventListener {
 
         viewPole = new ViewPole(initialViewData, viewScale, ViewPole.Projection.perspective);
 
-        mouseListener = new MouseListener(viewPole);
-        glWindow.addMouseListener(mouseListener);
+        inputListener = new InputListener(viewPole);
+        glWindow.addMouseListener(inputListener);
+        glWindow.addKeyListener(inputListener);
 
         int blockBinding = 0;
 
@@ -108,6 +119,35 @@ public class GlViewer implements GLEventListener {
         animator.setUpdateFPSFrames(60, System.out);
 
         checkError(gl4);
+    }
+    
+    private void initDebug(GL4 gl4) {
+
+        glWindow.getContext().addGLDebugListener(new GlDebugOutput());
+        // Turn off all the debug
+        gl4.glDebugMessageControl(
+                GL_DONT_CARE, // source
+                GL_DONT_CARE, // type
+                GL_DONT_CARE, // severity
+                0, // count
+                null, // id
+                false); // enabled
+        // Turn on all OpenGL Errors, shader compilation/linking errors, or highly-dangerous undefined behavior 
+        gl4.glDebugMessageControl(
+                GL_DONT_CARE, // source
+                GL_DONT_CARE, // type
+                GL_DEBUG_SEVERITY_HIGH, // severity
+                0, // count
+                null, // id
+                true); // enabled
+        // Turn on all major performance warnings, shader compilation/linking warnings or the use of deprecated functions
+        gl4.glDebugMessageControl(
+                GL_DONT_CARE, // source
+                GL_DONT_CARE, // type
+                GL_DEBUG_SEVERITY_MEDIUM, // severity
+                0, // count
+                null, // id
+                true); // enabled
     }
 
     private void initUBO(GL4 gl4, int blockBinding) {
@@ -127,7 +167,7 @@ public class GlViewer implements GLEventListener {
 
     @Override
     public void dispose(GLAutoDrawable glad) {
-        System.out.println("dispose");
+        System.exit(0);
     }
 
     @Override
@@ -138,8 +178,8 @@ public class GlViewer implements GLEventListener {
 
         updateCamera(gl4);
 
-        weightedBlended.render(gl4, scene);
-//        weightedBlendedOpaque.render(gl4, scene);
+//        weightedBlended.render(gl4, scene);
+        weightedBlendedOpaque.render(gl4, scene);
 
         checkError(gl4);
     }
@@ -199,10 +239,6 @@ public class GlViewer implements GLEventListener {
             gl3.glBufferSubData(GL4.GL_UNIFORM_BUFFER, offset, size, projFB);
         }
         gl3.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
-    }
-
-    public NewtCanvasAWT getNewtCanvasAWT() {
-        return newtCanvasAWT;
     }
 
     public GLWindow getGlWindow() {

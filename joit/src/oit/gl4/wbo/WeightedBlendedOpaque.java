@@ -5,10 +5,30 @@
  */
 package oit.gl4.wbo;
 
+import static com.jogamp.opengl.GL.GL_CLAMP_TO_EDGE;
+import static com.jogamp.opengl.GL.GL_LEQUAL;
+import static com.jogamp.opengl.GL.GL_NEAREST;
+import static com.jogamp.opengl.GL.GL_NEAREST_MIPMAP_NEAREST;
+import static com.jogamp.opengl.GL.GL_NONE;
+import static com.jogamp.opengl.GL.GL_TEXTURE_MAG_FILTER;
+import static com.jogamp.opengl.GL.GL_TEXTURE_MIN_FILTER;
+import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_S;
+import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_T;
+import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_BORDER_COLOR;
+import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_COMPARE_FUNC;
+import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_COMPARE_MODE;
+import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_WRAP_R;
+import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LOD;
+import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MIN_LOD;
+import static com.jogamp.opengl.GL2GL3.GL_TEXTURE_LOD_BIAS;
 import com.jogamp.opengl.GL4;
+import com.jogamp.opengl.util.GLBuffers;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;
+import oit.gl4.BufferUtils;
 import oit.gl4.FullscreenQuad;
 import oit.gl4.Scene;
 import oit.gl4.wbo.glsl.Final;
@@ -23,7 +43,6 @@ public class WeightedBlendedOpaque {
 
     private int[] accumulationFboId;
     private int[] accumulationTexId;
-    private int[] sampler;
     private Vec2i imageSize;
     private Init init;
     private Final finale;
@@ -33,6 +52,15 @@ public class WeightedBlendedOpaque {
     private int[] opaqueColorTexId;
     private int[] opaqueDepthTexId;
     private int[] opaqueFboId;
+
+    private class Buffer {
+
+        public static final int VIEW_PROJ = 0;
+        public static final int MODEL = 1;
+        public static final int MAX = 2;
+    }
+
+    private IntBuffer samplerName = GLBuffers.newDirectIntBuffer(1);
 
     public WeightedBlendedOpaque(GL4 gl4, int blockBinding) {
 
@@ -87,7 +115,7 @@ public class WeightedBlendedOpaque {
         {
             gl4.glActiveTexture(GL4.GL_TEXTURE0);
             gl4.glBindTexture(GL4.GL_TEXTURE_RECTANGLE, opaqueDepthTexId[0]);
-            gl4.glBindSampler(0, sampler[0]);
+            gl4.glBindSampler(0, samplerName.get(0));
             {
                 gl4.glUniform1f(init.getDepthScaleUL(), weightParameter);
                 scene.renderWaTransparent(gl4, init.getModelToWorldUL(), init.getAlphaUL());
@@ -108,15 +136,15 @@ public class WeightedBlendedOpaque {
         {
             gl4.glActiveTexture(GL4.GL_TEXTURE0);
             gl4.glBindTexture(GL4.GL_TEXTURE_RECTANGLE, accumulationTexId[0]);
-            gl4.glBindSampler(0, sampler[0]);
+            gl4.glBindSampler(0, samplerName.get(0));
             {
                 gl4.glActiveTexture(GL4.GL_TEXTURE1);
                 gl4.glBindTexture(GL4.GL_TEXTURE_RECTANGLE, accumulationTexId[1]);
-                gl4.glBindSampler(1, sampler[0]);
+                gl4.glBindSampler(1, samplerName.get(0));
                 {
                     gl4.glActiveTexture(GL4.GL_TEXTURE2);
                     gl4.glBindTexture(GL4.GL_TEXTURE_RECTANGLE, opaqueColorTexId[0]);
-                    gl4.glBindSampler(2, sampler[0]);
+                    gl4.glBindSampler(2, samplerName.get(0));
                     {
                         fullscreenQuad.render(gl4);
                     }
@@ -130,15 +158,20 @@ public class WeightedBlendedOpaque {
         finale.unbind(gl4);
     }
 
+    private void initBuffers(GL4 gl4) {
+        
+//        gl4.glCreateBuffers(Buffer.MAX, samplerName);
+    }
+
     private void buildShaders(GL4 gl4, int blockBinding) {
 
         String shadersFilepath = "/oit/gl4/wbo/glsl/shaders/";
 
-        opaque = new Opaque(gl4, shadersFilepath, new String[]{"opaque_VS.glsl", "shade_VS.glsl"},
-                new String[]{"opaque_FS.glsl", "shade_FS.glsl"}, blockBinding);
+        opaque = new Opaque(gl4, shadersFilepath, new String[]{"opaque_VS.glsl"},
+                new String[]{"opaque_FS.glsl"}, blockBinding);
 
-        init = new Init(gl4, shadersFilepath, new String[]{"init_VS.glsl", "shade_VS.glsl"},
-                new String[]{"init_FS.glsl", "shade_FS.glsl"}, blockBinding);
+        init = new Init(gl4, shadersFilepath, new String[]{"init_VS.glsl"},
+                new String[]{"init_FS.glsl"}, blockBinding);
         init.bind(gl4);
         {
             gl4.glUniform1i(init.getOpaqueDepthTexUL(), 0);
@@ -256,12 +289,22 @@ public class WeightedBlendedOpaque {
 
     private void initSampler(GL4 gl4) {
 
-        sampler = new int[1];
-        gl4.glGenSamplers(1, sampler, 0);
+        FloatBuffer borderColorBuffer = GLBuffers.newDirectFloatBuffer(new float[]{0.0f, 0.0f, 0.0f, 0.0f});
 
-        gl4.glSamplerParameteri(sampler[0], GL4.GL_TEXTURE_WRAP_S, GL4.GL_CLAMP_TO_EDGE);
-        gl4.glSamplerParameteri(sampler[0], GL4.GL_TEXTURE_WRAP_T, GL4.GL_CLAMP_TO_EDGE);
-        gl4.glSamplerParameteri(sampler[0], GL4.GL_TEXTURE_MIN_FILTER, GL4.GL_NEAREST);
-        gl4.glSamplerParameteri(sampler[0], GL4.GL_TEXTURE_MAG_FILTER, GL4.GL_NEAREST);
+        gl4.glCreateSamplers(1, samplerName);
+        // TODO check GL_NEAREST_MIPMAP_NEAREST
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        gl4.glSamplerParameterfv(samplerName.get(0), GL_TEXTURE_BORDER_COLOR, borderColorBuffer);
+        gl4.glSamplerParameterf(samplerName.get(0), GL_TEXTURE_MIN_LOD, -1000.f);
+        gl4.glSamplerParameterf(samplerName.get(0), GL_TEXTURE_MAX_LOD, 1000.f);
+        gl4.glSamplerParameterf(samplerName.get(0), GL_TEXTURE_LOD_BIAS, 0.0f);
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        gl4.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+        BufferUtils.destroyDirectBuffer(borderColorBuffer);
     }
 }

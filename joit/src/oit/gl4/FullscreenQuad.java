@@ -5,9 +5,19 @@
  */
 package oit.gl4;
 
+import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
+import static com.jogamp.opengl.GL.GL_FLOAT;
+import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
+import static com.jogamp.opengl.GL.GL_TRIANGLES;
+import static com.jogamp.opengl.GL.GL_UNSIGNED_SHORT;
+import static com.jogamp.opengl.GL2ES3.GL_QUADS;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.util.GLBuffers;
+import glm.vec._2.Vec2;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 
 /**
  *
@@ -15,67 +25,65 @@ import java.nio.FloatBuffer;
  */
 public class FullscreenQuad {
 
-    private int[] objects;
+    private int vertexCount = 4;
+    private int vertexSize = vertexCount * Vec2.SIZE;
+    private FloatBuffer vertexData = GLBuffers.newDirectFloatBuffer(new float[]{
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+        1.0f, 1.0f,
+        0.0f, 1.0f});
+
+    private int elementCount = 6;
+    private int elementSize = elementCount * Short.BYTES;
+    private ShortBuffer elementData = GLBuffers.newDirectShortBuffer(new short[]{
+        0, 1, 2,
+        2, 3, 0});
+
+    private class Buffer {
+
+        public static final int VERTEX = 0;
+        public static final int ELEMENT = 1;
+        public static final int MAX = 2;
+    }
+
+    private IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX),
+            vertexArrayName = GLBuffers.newDirectIntBuffer(1);
 
     public FullscreenQuad(GL4 gl4) {
 
-        objects = new int[Objects.size.ordinal()];
+        initBuffer(gl4);
+        initVertexArray(gl4);
+    }
 
-        initVbo(gl4);
+    private void initBuffer(GL4 gl3) {
 
-        initVao(gl4);
+        gl3.glGenBuffers(Buffer.MAX, bufferName);
+
+        gl3.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
+        gl3.glBufferStorage(GL_ARRAY_BUFFER, vertexSize, vertexData, 0);
+
+        gl3.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+        gl3.glBufferStorage(GL_ELEMENT_ARRAY_BUFFER, elementSize, elementData, 0);
+    }
+
+    private void initVertexArray(GL4 gl4) {
+
+        gl4.glCreateVertexArrays(1, vertexArrayName);
+
+        gl4.glVertexArrayAttribBinding(vertexArrayName.get(0), Semantic.Attr.POSITION, Semantic.Stream._0);
+        gl4.glVertexArrayAttribFormat(vertexArrayName.get(0), Semantic.Attr.POSITION, 2, GL_FLOAT, false, 0);
+        gl4.glEnableVertexArrayAttrib(vertexArrayName.get(0), Semantic.Attr.POSITION);
+
+        gl4.glVertexArrayElementBuffer(vertexArrayName.get(0), bufferName.get(Buffer.ELEMENT));
+        gl4.glVertexArrayVertexBuffer(vertexArrayName.get(0), Semantic.Stream._0, bufferName.get(Buffer.VERTEX), 0, 
+                Vec2.SIZE);
     }
 
     public void render(GL4 gl4) {
 
-        gl4.glBindBuffer(GL4.GL_ARRAY_BUFFER, objects[Objects.vbo.ordinal()]);
+        gl4.glBindVertexArray(vertexArrayName.get(0));
 
-        gl4.glBindVertexArray(objects[Objects.vao.ordinal()]);
-        {
-            //  Render, passing the vertex number
-            gl4.glDrawArrays(GL4.GL_QUADS, 0, 4);
-        }
-        gl4.glBindVertexArray(0);
-    }
-
-    private void initVbo(GL4 gl3) {
-
-        float[] vertexAttributes = new float[]{
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            1.0f, 1.0f,
-            0.0f, 1.0f};
-
-        gl3.glGenBuffers(1, objects, Objects.vbo.ordinal());
-
-        gl3.glBindBuffer(GL4.GL_ARRAY_BUFFER, objects[Objects.vbo.ordinal()]);
-        {
-            FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(vertexAttributes);
-
-            gl3.glBufferData(GL4.GL_ARRAY_BUFFER, vertexAttributes.length * 4, buffer, GL4.GL_STATIC_DRAW);
-        }
-        gl3.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
-    }
-
-    private void initVao(GL4 gl4) {
-
-        gl4.glBindBuffer(GL4.GL_ARRAY_BUFFER, objects[Objects.vbo.ordinal()]);
-
-        gl4.glGenVertexArrays(1, objects, Objects.vao.ordinal());
-        gl4.glBindVertexArray(objects[Objects.vao.ordinal()]);
-        {
-            gl4.glEnableVertexAttribArray(0);
-            {
-                gl4.glVertexAttribPointer(0, 2, GL4.GL_FLOAT, false, 0, 0);
-            }
-        }
-        gl4.glBindVertexArray(0);
-    }
-
-    private enum Objects {
-
-        vbo,
-        vao,
-        size
+        //  Render, passing the vertex number
+        gl4.glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, 0);
     }
 }

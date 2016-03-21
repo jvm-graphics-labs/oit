@@ -5,18 +5,21 @@
  */
 package oit.gl4;
 
+import com.jogamp.newt.event.KeyEvent;
+import com.jogamp.newt.event.KeyListener;
 import com.jogamp.newt.event.MouseEvent;
+import com.jogamp.newt.event.MouseListener;
 import glutil.ViewPole;
 
 /**
  *
  * @author gbarbieri
  */
-public class MouseListener implements com.jogamp.newt.event.MouseListener {
+public class InputListener implements MouseListener, KeyListener {
 
     private ViewPole viewPole;
 
-    public MouseListener(ViewPole viewPole) {
+    public InputListener(ViewPole viewPole) {
         this.viewPole = viewPole;
     }
 
@@ -69,6 +72,18 @@ public class MouseListener implements com.jogamp.newt.event.MouseListener {
         MouseEvent me1 = new MouseEvent(me.getEventType(), me.getSource(), me.getWhen(), me.getModifiers(),
                 me.getX(), me.getY(), me.getClickCount(), me.getButton(), newRotation, me.getRotationScale());
         viewPole.mouseWheelMoved(me);
+    }
+
+    @Override
+    public void keyPressed(KeyEvent ke) {
+        if(ke.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            Viewer.animator.stop();
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent ke) {
+    
     }
 
 }
