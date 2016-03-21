@@ -22,9 +22,6 @@ public class Init extends glsl.GLSLProgramObject {
 
         super(gl4, shadersFilepath, vertexShaders, fragmentShaders);
 
-        int projectionUBI = gl4.glGetUniformBlockIndex(getProgramId(), "vpMatrixes");
-        gl4.glUniformBlockBinding(getProgramId(), projectionUBI, blockBinding);
-
         alphaUL = gl4.glGetUniformLocation(getProgramId(), "alpha");
 
         modelToWorldUL = gl4.glGetUniformLocation(getProgramId(), "modelToWorld");
@@ -33,7 +30,7 @@ public class Init extends glsl.GLSLProgramObject {
 
         opaqueDepthTexUL = gl4.glGetUniformLocation(getProgramId(), "opaqueDepthTex");
 
-        if (projectionUBI == -1 || alphaUL == -1 || modelToWorldUL == -1
+        if (alphaUL == -1 || modelToWorldUL == -1
                 || depthScaleUL == -1 || opaqueDepthTexUL == -1) {
             System.out.println("[Init] UL error");
         }

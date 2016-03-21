@@ -7,12 +7,13 @@ package oit.gl4;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.Screen;
-import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
 import static com.jogamp.opengl.GL.GL_DONT_CARE;
 import static com.jogamp.opengl.GL2ES2.GL_DEBUG_SEVERITY_HIGH;
 import static com.jogamp.opengl.GL2ES2.GL_DEBUG_SEVERITY_MEDIUM;
+import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
 import com.jogamp.opengl.GL4;
+import static com.jogamp.opengl.GL4.GL_DYNAMIC_STORAGE_BIT;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLContext;
@@ -20,15 +21,17 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLBuffers;
+import glm.glm;
+import glm.mat._4.Mat4;
 import glutil.ViewData;
 import glutil.ViewPole;
 import glutil.ViewScale;
 import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jglm.Jglm;
-import jglm.Mat4;
 import jglm.Quat;
 import jglm.Vec2i;
 import jglm.Vec3;
@@ -44,7 +47,6 @@ public class Viewer implements GLEventListener {
     public static Vec2i imageSize = new Vec2i(1024, 768);
     public static GLWindow glWindow;
     public static Animator animator;
-    
 
     public static void main(String[] args) {
 
@@ -71,21 +73,29 @@ public class Viewer implements GLEventListener {
         animator = new Animator(glWindow);
         animator.start();
     }
-    
+
     private ViewPole viewPole;
-    private int[] ubo;
-    private InputListener inputListener;
+    public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
+    private InputListener inputListener1;
     public static float projectionBase;
     private Scene scene;
     private WeightedBlended weightedBlended;
     private WeightedBlendedOpaque weightedBlendedOpaque;
+    private FloatBuffer viewProjBuffer = GLBuffers.newDirectFloatBuffer(16);
+    private Mat4 proj = new Mat4(), viewProj = new Mat4();
+    /**
+     * https://jogamp.org/bugzilla/show_bug.cgi?id=1287
+     */
+    private boolean bug1287 = true;
 
     @Override
     public void init(GLAutoDrawable glad) {
 
         GL4 gl4 = glad.getGL().getGL4();
-        
+
         initDebug(gl4);
+
+        initBuffers(gl4);
 
         try {
             scene = new Scene(gl4, "/data/dragon.obj");
@@ -93,21 +103,11 @@ public class Viewer implements GLEventListener {
             Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        Vec3 target = new Vec3(0f, .12495125f, 0f);
-        Quat orient = new Quat(0.0f, 0.0f, 0.0f, 1.0f);
-        ViewData initialViewData = new ViewData(target, orient, 0.5f, 0.0f);
-
-        ViewScale viewScale = new ViewScale(3.0f, 20.0f, 1.5f, 0.0005f, 0.0f, 0.0f, 90.0f / 250.0f);
-
-        viewPole = new ViewPole(initialViewData, viewScale, ViewPole.Projection.perspective);
-
-        inputListener = new InputListener(viewPole);
-        glWindow.addMouseListener(inputListener);
-        glWindow.addKeyListener(inputListener);
+        inputListener1 = new InputListener();
+        glWindow.addMouseListener(inputListener1);
+        glWindow.addKeyListener(inputListener1);
 
         int blockBinding = 0;
-
-        initUBO(gl4, blockBinding);
 
         weightedBlended = new WeightedBlended(gl4, blockBinding);
         weightedBlendedOpaque = new WeightedBlendedOpaque(gl4, blockBinding);
@@ -117,10 +117,8 @@ public class Viewer implements GLEventListener {
         projectionBase = 5000f;
 
         animator.setUpdateFPSFrames(60, System.out);
-
-        checkError(gl4);
     }
-    
+
     private void initDebug(GL4 gl4) {
 
         glWindow.getContext().addGLDebugListener(new GlDebugOutput());
@@ -150,19 +148,24 @@ public class Viewer implements GLEventListener {
                 true); // enabled
     }
 
-    private void initUBO(GL4 gl4, int blockBinding) {
+    private void initBuffers(GL4 gl4) {
 
-        ubo = new int[1];
-        int size = 16 * GLBuffers.SIZEOF_FLOAT;
+        gl4.glCreateBuffers(Buffer.MAX, bufferName);
 
-        gl4.glGenBuffers(1, ubo, 0);
-        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, ubo[0]);
-        {
-            gl4.glBufferData(GL4.GL_UNIFORM_BUFFER, size * 2, null, GL4.GL_DYNAMIC_DRAW);
+        if (!bug1287) {
 
-            gl4.glBindBufferBase(GL4.GL_UNIFORM_BUFFER, blockBinding, ubo[0]);
+            gl4.glNamedBufferStorage(bufferName.get(Buffer.VIEW_PROJ), Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
+
+            gl4.glNamedBufferStorage(bufferName.get(Buffer.MODEL), Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
+
+        } else {
+
+            gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.VIEW_PROJ));
+            gl4.glBufferStorage(GL_UNIFORM_BUFFER, Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
+
+            gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.MODEL));
+            gl4.glBufferStorage(GL_UNIFORM_BUFFER, Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
         }
-        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
     }
 
     @Override
@@ -176,35 +179,18 @@ public class Viewer implements GLEventListener {
 
         GL4 gl4 = glad.getGL().getGL4();
 
-        updateCamera(gl4);
+        {
+            inputListener1.update();
+
+            viewProj.set(proj).mul(inputListener1.getView());
+            viewProjBuffer.put(viewProj.toFa_()).rewind();
+
+            gl4.glNamedBufferSubData(bufferName.get(Buffer.VIEW_PROJ), 0, Mat4.SIZE, viewProjBuffer);
+        }
+        gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM0, bufferName.get(Buffer.VIEW_PROJ));
 
 //        weightedBlended.render(gl4, scene);
         weightedBlendedOpaque.render(gl4, scene);
-
-        checkError(gl4);
-    }
-
-    private void updateCamera(GL4 gl4) {
-
-        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, ubo[0]);
-        {
-            int size = 16 * GLBuffers.SIZEOF_FLOAT;
-            int offset = 0;
-
-            FloatBuffer viewMat = GLBuffers.newDirectFloatBuffer(viewPole.calcMatrix().toFloatArray());
-
-            gl4.glBufferSubData(GL4.GL_UNIFORM_BUFFER, offset, size, viewMat);
-        }
-        gl4.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
-    }
-
-    private void checkError(GL4 gl4) {
-
-        int error = gl4.glGetError();
-
-        if (error != GL4.GL_NO_ERROR) {
-            System.out.println("error " + error);
-        }
     }
 
     @Override
@@ -218,34 +204,15 @@ public class Viewer implements GLEventListener {
 
         imageSize = new Vec2i(width, height);
 
-        updateProjection(gl4, width, height);
+        glm.perspective(30f, (float) width / height, 0.0001f, 10, proj);
 
         gl4.glViewport(0, 0, width, height);
-
-        checkError(gl4);
     }
 
-    private void updateProjection(GL4 gl3, int width, int height) {
+    public class Buffer {
 
-        gl3.glBindBuffer(GL4.GL_UNIFORM_BUFFER, ubo[0]);
-        {
-            float aspect = (float) width / (float) height;
-            int size = 16 * GLBuffers.SIZEOF_FLOAT;
-            int offset = size;
-
-            Mat4 projMat = Jglm.perspective(60f, aspect, 0.0001f, 10);
-            FloatBuffer projFB = GLBuffers.newDirectFloatBuffer(projMat.toFloatArray());
-
-            gl3.glBufferSubData(GL4.GL_UNIFORM_BUFFER, offset, size, projFB);
-        }
-        gl3.glBindBuffer(GL4.GL_UNIFORM_BUFFER, 0);
-    }
-
-    public GLWindow getGlWindow() {
-        return glWindow;
-    }
-
-    public Animator getAnimator() {
-        return animator;
+        public static final int VIEW_PROJ = 0;
+        public static final int MODEL = 1;
+        public static final int MAX = 2;
     }
 }

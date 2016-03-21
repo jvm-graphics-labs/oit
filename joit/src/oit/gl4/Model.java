@@ -5,7 +5,6 @@
  */
 package oit.gl4;
 
-import com.jogamp.common.nio.Buffers;
 import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
 import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
 import static com.jogamp.opengl.GL.GL_FLOAT;

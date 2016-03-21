@@ -5,10 +5,13 @@
  */
 package oit.gl4;
 
+import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
 import com.jogamp.opengl.GL4;
+import com.jogamp.opengl.util.GLBuffers;
+import glm.mat._4.Mat4;
+import glm.vec._3.Vec3;
 import java.io.IOException;
-import jglm.Mat4;
-import jglm.Vec3;
+import java.nio.ByteBuffer;
 
 /**
  *
@@ -19,15 +22,16 @@ public class Scene {
     private Model model;
     private Mat4[] positions;
     private float[] opacities;
+    private ByteBuffer modelBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
 
     public Scene(GL4 gl4, String filepath) throws IOException {
 
         model = new Model(gl4, filepath);
 
-        Mat4 m0 = Mat4.translate(new Vec3(.1f, 0f, 0f));
-        Mat4 m1 = Mat4.translate(new Vec3(-.1f, 0f, 0f));
-        Mat4 m2 = Mat4.translate(new Vec3(0f, 0f, .1f));
-        Mat4 m3 = Mat4.translate(new Vec3(0f, 0f, -.1f));
+        Mat4 m0 = Mat4.translation(new Mat4(), +.1f, 0f, 0f);
+        Mat4 m1 = Mat4.translation(new Mat4(), -.1f, 0f, 0f);
+        Mat4 m2 = Mat4.translation(new Mat4(), 0f, 0f, +.1f);
+        Mat4 m3 = Mat4.translation(new Mat4(), 0f, 0f, -.1f);
 //        
 //        Mat4 m0 = Mat4.translate(new Vec3(0f, 0f, 0f));
 //        Mat4 m0 = Mat4.translate(new Vec3(.1f, 0f, 0f));
@@ -98,19 +102,31 @@ public class Scene {
         for (int i = 0; i < positions.length; i++) {
 
             gl4.glUniform1f(alphaUL, opacities[i]);
-            gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
+            gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFa_(), 0);
 
             model.render(gl4);
         }
     }
 
-    public void renderWaOpaque(GL4 gl4, int modelMatrixUL) {
+    public void renderOpaque(GL4 gl4, int modelMatrixUL) {
 
         for (int i = 0; i < positions.length; i++) {
 
             if (opacities[i] == 1) {
 
-                gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
+                gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFa_(), 0);
+                
+                modelBuffer.asFloatBuffer().put(positions[i].toFa_());
+                
+                gl4.glNamedBufferSubData(
+                        Viewer.bufferName.get(Viewer.Buffer.MODEL), 
+                        0, 
+                        glm.mat._4.Mat4.SIZE, 
+                        modelBuffer);
+                
+                gl4.glBindBufferBase(GL_UNIFORM_BUFFER, 
+                        Semantic.Uniform.TRANSFORM1, 
+                        Viewer.bufferName.get(Viewer.Buffer.MODEL));
 
                 model.render(gl4);
             }
@@ -124,7 +140,7 @@ public class Scene {
             if (opacities[i] < 1) {
 
                 gl4.glUniform1f(alphaUL, opacities[i]);
-                gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
+                gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFa_(), 0);
 
                 model.render(gl4);
             }

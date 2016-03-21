@@ -7,26 +7,46 @@
 // Copyright (c) NVIDIA Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
-#version 400
+#version 450
 
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
+// Vertex attributes
+#define POSITION    0
+#define NORMAL      1
+
+// Uniform
+#define TRANSFORM0  0
+#define TRANSFORM1  1
+
+// Interfaces
+#define BLOCK       0
+
+precision highp float;
+precision highp int;
+layout(std140, column_major) uniform;
+layout(std430, column_major) buffer;
+
+layout (location = POSITION) in vec3 position;
+layout (location = NORMAL) in vec3 normal;
 
 uniform mat4 modelToWorld;
 
-layout(std140) uniform vpMatrixes  {
+layout (location = TRANSFORM0) uniform Transform0 
+{
+    mat4 viewProj;
+} t0;
 
-    mat4 worldToCamera;
-    mat4 cameraToClip;
-};
+layout (location = TRANSFORM1) uniform Transform1 
+{
+    mat4 modelToWorld;
+} t1;
 
 smooth out vec3 interpolated;
 
 vec3 shade();
 
-void main(void) {
-
-    gl_Position = cameraToClip * worldToCamera * modelToWorld * vec4(position, 1.0);
+void main(void) 
+{
+    gl_Position = t0.viewProj * (t1.modelToWorld * vec4(position, 1.0));
     interpolated = shade();
 }
 

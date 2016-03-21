@@ -20,15 +20,12 @@ public class Opaque extends glsl.GLSLProgramObject {
     public Opaque(GL4 gl4, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders, int blockBinding) {
 
         super(gl4, shadersFilepath, vertexShaders, fragmentShaders);
-
-        int projectionUBI = gl4.glGetUniformBlockIndex(getProgramId(), "vpMatrixes");
-        gl4.glUniformBlockBinding(getProgramId(), projectionUBI, blockBinding);
-
+        
         alphaUL = gl4.glGetUniformLocation(getProgramId(), "alpha");
 
         modelToWorldUL = gl4.glGetUniformLocation(getProgramId(), "modelToWorld");
 
-        if (projectionUBI == -1 || alphaUL == -1 || modelToWorldUL == -1) {
+        if (alphaUL == -1 || modelToWorldUL == -1) {
             System.out.println("[Opaque] UL error");
         }
     }
