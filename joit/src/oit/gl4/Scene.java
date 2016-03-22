@@ -108,24 +108,24 @@ public class Scene {
         }
     }
 
-    public void renderOpaque(GL4 gl4, int modelMatrixUL) {
+    public void renderOpaque(GL4 gl4, int alphaUL) {
 
         for (int i = 0; i < positions.length; i++) {
 
             if (opacities[i] == 1) {
 
-                gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFa_(), 0);
+                gl4.glUniform1f(alphaUL, 1);
                 
                 modelBuffer.asFloatBuffer().put(positions[i].toFa_());
-                
+
                 gl4.glNamedBufferSubData(
-                        Viewer.bufferName.get(Viewer.Buffer.MODEL), 
-                        0, 
-                        glm.mat._4.Mat4.SIZE, 
+                        Viewer.bufferName.get(Viewer.Buffer.MODEL),
+                        0,
+                        glm.mat._4.Mat4.SIZE,
                         modelBuffer);
-                
-                gl4.glBindBufferBase(GL_UNIFORM_BUFFER, 
-                        Semantic.Uniform.TRANSFORM1, 
+
+                gl4.glBindBufferBase(GL_UNIFORM_BUFFER,
+                        Semantic.Uniform.TRANSFORM1,
                         Viewer.bufferName.get(Viewer.Buffer.MODEL));
 
                 model.render(gl4);
@@ -133,14 +133,25 @@ public class Scene {
         }
     }
 
-    public void renderWaTransparent(GL4 gl4, int modelMatrixUL, int alphaUL) {
+    public void renderWaTransparent(GL4 gl4, int alphaUL) {
 
         for (int i = 0; i < positions.length; i++) {
 
             if (opacities[i] < 1) {
 
                 gl4.glUniform1f(alphaUL, opacities[i]);
-                gl4.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFa_(), 0);
+
+                modelBuffer.asFloatBuffer().put(positions[i].toFa_());
+
+                gl4.glNamedBufferSubData(
+                        Viewer.bufferName.get(Viewer.Buffer.MODEL),
+                        0,
+                        glm.mat._4.Mat4.SIZE,
+                        modelBuffer);
+
+                gl4.glBindBufferBase(GL_UNIFORM_BUFFER,
+                        Semantic.Uniform.TRANSFORM1,
+                        Viewer.bufferName.get(Viewer.Buffer.MODEL));
 
                 model.render(gl4);
             }

@@ -32,13 +32,19 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 450
 #extension ARB_draw_buffers : require
 
 #define COLOR_FREQ 30.0
 #define ALPHA_FREQ 30.0
 
-smooth in vec3 interpolated;
+// Interfaces
+#define BLOCK       0
+
+layout (location = BLOCK) in Block 
+{
+    vec3 interpolated;
+} inBlock;
 
 uniform float alpha;
 
@@ -77,9 +83,9 @@ void main(void)
 #if 1
 vec4 shade()
 {
-    float xWorldPos = interpolated.x;
-    float yWorldPos = interpolated.y;
-    float diffuse = interpolated.z;
+    float xWorldPos = inBlock.interpolated.x;
+    float yWorldPos = inBlock.interpolated.y;
+    float diffuse = inBlock.interpolated.z;
 
     vec4 color;
     float i = floor(xWorldPos * COLOR_FREQ);

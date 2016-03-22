@@ -14,7 +14,6 @@ import com.jogamp.opengl.GL4;
 public class Init extends glsl.GLSLProgramObject {
 
     private int alphaUL;
-    private int modelToWorldUL;
     private int depthScaleUL;
     private int opaqueDepthTexUL;
 
@@ -24,24 +23,17 @@ public class Init extends glsl.GLSLProgramObject {
 
         alphaUL = gl4.glGetUniformLocation(getProgramId(), "alpha");
 
-        modelToWorldUL = gl4.glGetUniformLocation(getProgramId(), "modelToWorld");
-
         depthScaleUL = gl4.glGetUniformLocation(getProgramId(), "depthScale");
 
         opaqueDepthTexUL = gl4.glGetUniformLocation(getProgramId(), "opaqueDepthTex");
 
-        if (alphaUL == -1 || modelToWorldUL == -1
-                || depthScaleUL == -1 || opaqueDepthTexUL == -1) {
+        if (alphaUL == -1 || depthScaleUL == -1 || opaqueDepthTexUL == -1) {
             System.out.println("[Init] UL error");
         }
     }
 
     public int getAlphaUL() {
         return alphaUL;
-    }
-
-    public int getModelToWorldUL() {
-        return modelToWorldUL;
     }
 
     public int getDepthScaleUL() {

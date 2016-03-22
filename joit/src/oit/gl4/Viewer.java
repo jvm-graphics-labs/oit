@@ -23,19 +23,12 @@ import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLBuffers;
 import glm.glm;
 import glm.mat._4.Mat4;
-import glutil.ViewData;
-import glutil.ViewPole;
-import glutil.ViewScale;
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jglm.Jglm;
-import jglm.Quat;
 import jglm.Vec2i;
-import jglm.Vec3;
-import oit.gl4.wb.WeightedBlended;
 import oit.gl4.wbo.WeightedBlendedOpaque;
 
 /**
@@ -74,12 +67,10 @@ public class Viewer implements GLEventListener {
         animator.start();
     }
 
-    private ViewPole viewPole;
     public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
-    private InputListener inputListener1;
+    private InputListener inputListener;
     public static float projectionBase;
     private Scene scene;
-    private WeightedBlended weightedBlended;
     private WeightedBlendedOpaque weightedBlendedOpaque;
     private FloatBuffer viewProjBuffer = GLBuffers.newDirectFloatBuffer(16);
     private Mat4 proj = new Mat4(), viewProj = new Mat4();
@@ -103,13 +94,12 @@ public class Viewer implements GLEventListener {
             Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        inputListener1 = new InputListener();
-        glWindow.addMouseListener(inputListener1);
-        glWindow.addKeyListener(inputListener1);
+        inputListener = new InputListener();
+        glWindow.addMouseListener(inputListener);
+        glWindow.addKeyListener(inputListener);
 
         int blockBinding = 0;
 
-        weightedBlended = new WeightedBlended(gl4, blockBinding);
         weightedBlendedOpaque = new WeightedBlendedOpaque(gl4, blockBinding);
 
         gl4.glDisable(GL4.GL_CULL_FACE);
@@ -180,16 +170,15 @@ public class Viewer implements GLEventListener {
         GL4 gl4 = glad.getGL().getGL4();
 
         {
-            inputListener1.update();
+            inputListener.update();
 
-            viewProj.set(proj).mul(inputListener1.getView());
+            viewProj.set(proj).mul(inputListener.getView());
             viewProjBuffer.put(viewProj.toFa_()).rewind();
 
             gl4.glNamedBufferSubData(bufferName.get(Buffer.VIEW_PROJ), 0, Mat4.SIZE, viewProjBuffer);
         }
         gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM0, bufferName.get(Buffer.VIEW_PROJ));
 
-//        weightedBlended.render(gl4, scene);
         weightedBlendedOpaque.render(gl4, scene);
     }
 
@@ -199,7 +188,6 @@ public class Viewer implements GLEventListener {
 
         GL4 gl4 = glad.getGL().getGL4();
 
-        weightedBlended.reshape(gl4, width, height);
         weightedBlendedOpaque.reshape(gl4, width, height);
 
         imageSize = new Vec2i(width, height);

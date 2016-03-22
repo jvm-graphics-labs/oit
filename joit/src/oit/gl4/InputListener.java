@@ -145,9 +145,9 @@ public class InputListener implements KeyListener, MouseListener {
 
     private void reset() {
 
-        radius = 5_000f;
+        radius = 0.5f;
         orient.identity();
-        target.set(0, 0, 0);
+        target.set(0f, .12495125f, 0f);
         targetOffset.set(0, 0, 0, 0);
 
         tmpV.set(0, 0, 0);

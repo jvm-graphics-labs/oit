@@ -14,7 +14,6 @@ import com.jogamp.opengl.GL4;
  */
 public class Opaque extends glsl.GLSLProgramObject {
 
-    private int modelToWorldUL;
     private int alphaUL;
 
     public Opaque(GL4 gl4, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders, int blockBinding) {
@@ -23,15 +22,10 @@ public class Opaque extends glsl.GLSLProgramObject {
         
         alphaUL = gl4.glGetUniformLocation(getProgramId(), "alpha");
 
-        modelToWorldUL = gl4.glGetUniformLocation(getProgramId(), "modelToWorld");
 
-        if (alphaUL == -1 || modelToWorldUL == -1) {
+        if (alphaUL == -1) {
             System.out.println("[Opaque] UL error");
         }
-    }
-
-    public int getModelToWorldUL() {
-        return modelToWorldUL;
     }
 
     public int getAlphaUL() {

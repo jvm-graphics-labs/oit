@@ -19,10 +19,8 @@ import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_COMPARE_MODE;
 import static com.jogamp.opengl.GL2ES2.GL_TEXTURE_WRAP_R;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LOD;
 import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MIN_LOD;
-import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
 import static com.jogamp.opengl.GL2GL3.GL_TEXTURE_LOD_BIAS;
 import com.jogamp.opengl.GL4;
-import static com.jogamp.opengl.GL4.GL_DYNAMIC_STORAGE_BIT;
 import com.jogamp.opengl.util.GLBuffers;
 import glm.glm;
 import glm.mat._4.Mat4;
@@ -32,8 +30,6 @@ import jglm.Vec2i;
 import oit.gl4.BufferUtils;
 import oit.gl4.FullscreenQuad;
 import oit.gl4.Scene;
-import oit.gl4.Semantic;
-import oit.gl4.Viewer;
 import oit.gl4.wbo.glsl.Final;
 import oit.gl4.wbo.glsl.Init;
 import oit.gl4.wbo.glsl.Opaque;
@@ -56,14 +52,7 @@ public class WeightedBlendedOpaque {
     private int[] opaqueDepthTexId;
     private int[] opaqueFboId;
 
-    private class Buffer {
-
-        public static final int MODEL = 0;
-        public static final int MAX = 1;
-    }
-
-    private IntBuffer samplerName = GLBuffers.newDirectIntBuffer(1),
-            bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
+    private IntBuffer samplerName = GLBuffers.newDirectIntBuffer(1);
 
     /**
      * https://jogamp.org/bugzilla/show_bug.cgi?id=1287
@@ -96,7 +85,7 @@ public class WeightedBlendedOpaque {
 
         opaque.bind(gl4);
         {
-            scene.renderOpaque(gl4, opaque.getModelToWorldUL());
+            scene.renderOpaque(gl4, opaque.getAlphaUL());
         }
         opaque.unbind(gl4);
         gl4.glDisable(GL4.GL_DEPTH_TEST);
@@ -126,7 +115,7 @@ public class WeightedBlendedOpaque {
             gl4.glBindSampler(0, samplerName.get(0));
             {
                 gl4.glUniform1f(init.getDepthScaleUL(), weightParameter);
-                scene.renderWaTransparent(gl4, init.getModelToWorldUL(), init.getAlphaUL());
+                scene.renderWaTransparent(gl4, init.getAlphaUL());
             }
             gl4.glBindTexture(GL4.GL_TEXTURE_RECTANGLE, 0);
             gl4.glBindSampler(0, 0);
@@ -164,20 +153,6 @@ public class WeightedBlendedOpaque {
             gl4.glBindSampler(0, 0);
         }
         finale.unbind(gl4);
-    }
-
-    private void initBuffers(GL4 gl4) {
-
-        gl4.glCreateBuffers(Buffer.MAX, samplerName);
-
-        if (!bug1287) {
-
-//            gl4.glNamedBufferStorage(bufferName.get(Buffer.VIEW_PROJ), 2 * Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
-        } else {
-
-//            gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.VIEW_PROJ));
-//            gl4.glBufferStorage(GL_UNIFORM_BUFFER, 2 * Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
-        }
     }
 
     private void buildShaders(GL4 gl4, int blockBinding) {

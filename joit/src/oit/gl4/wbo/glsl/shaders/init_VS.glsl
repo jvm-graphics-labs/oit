@@ -53,31 +53,31 @@ layout(std430, column_major) buffer;
 layout (location = POSITION) in vec3 position;
 layout (location = NORMAL) in vec3 normal;
 
-smooth out vec3 interpolated;
-
-uniform mat4 modelToWorld;
-
-layout (location = TRANSFORM0) uniform Transform0 
+layout (binding = TRANSFORM0) uniform Transform0 
 {
     mat4 viewProj;
 } t0;
 
-layout (location = TRANSFORM1) uniform Transform1 
+layout (binding = TRANSFORM1) uniform Transform1 
 {
     mat4 modelToWorld;
 } t1;
 
+layout (location = BLOCK) out Block 
+{
+    vec3 interpolated;
+} outBlock;
 
 vec3 shade();
 
 void main(void) 
 {
-    gl_Position = t0.viewProj * (modelToWorld * vec4(position, 1.0));
-    interpolated = shade();
+    gl_Position = t0.viewProj * (t1.modelToWorld * vec4(position, 1.0));
+    outBlock.interpolated = shade();
 }
 
 vec3 shade()
 {
-    float diffuse = abs(normalize(mat3(modelToWorld) * normal).z);
+    float diffuse = abs(normalize(mat3(t1.modelToWorld) * normal).z);
     return vec3(position.xy, diffuse);
 }

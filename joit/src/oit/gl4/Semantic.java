@@ -81,7 +81,7 @@ public class Semantic {
         public static final int LIGHTING = 2;
         public static final int MATERIAL = 3;
         public static final int PARAMETERS = 4;
-        public static final int TRANSFORM2 = 5;
+//        public static final int TRANSFORM2 = 5;
         public static final int BACKGROUND = 6;
     }
 
