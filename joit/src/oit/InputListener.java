@@ -3,17 +3,19 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package oit.gl4;
+package oit;
 
 import com.jogamp.newt.event.KeyEvent;
 import com.jogamp.newt.event.KeyListener;
 import com.jogamp.newt.event.MouseEvent;
 import com.jogamp.newt.event.MouseListener;
+import com.jogamp.opengl.util.Animator;
 import glm.mat._4.Mat4;
 import glm.vec._2.Vec2;
 import glm.vec._2.i.Vec2i;
 import glm.vec._3.Vec3;
 import glm.vec._4.Vec4;
+import oit.gl4.Viewer;
 
 /**
  *
@@ -32,8 +34,9 @@ public class InputListener implements KeyListener, MouseListener {
     private Vec2i deltaInput;
     private Vec2 rotation;
     private long startPause;
+    private Animator animator;
 
-    public InputListener() {
+    public InputListener(Animator animator) {
 
         radius = 0.5f;
         orient = new Mat4();
@@ -49,6 +52,8 @@ public class InputListener implements KeyListener, MouseListener {
         deltaInput = new Vec2i();
 
         rotation = new Vec2();
+
+        this.animator = animator;
     }
 
     public void update() {
@@ -136,7 +141,7 @@ public class InputListener implements KeyListener, MouseListener {
     @Override
     public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-            Viewer.animator.stop();
+            animator.stop();
         }
         if (e.getKeyCode() == KeyEvent.VK_R) {
             reset();

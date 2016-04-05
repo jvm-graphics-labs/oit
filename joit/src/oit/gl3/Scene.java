@@ -5,10 +5,14 @@
  */
 package oit.gl3;
 
+import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
 import com.jogamp.opengl.GL3;
+import com.jogamp.opengl.util.GLBuffers;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import jglm.Mat4;
 import jglm.Vec3;
+import oit.gl3.dp.DepthPeeling;
 
 /**
  *
@@ -19,6 +23,8 @@ public class Scene {
     private Model model;
     private Mat4[] positions;
     private float[] opacities;
+    private ByteBuffer modelBuffer = GLBuffers.newDirectByteBuffer(glm.mat._4.Mat4.SIZE),
+            alphaBuffer = GLBuffers.newDirectByteBuffer(Float.BYTES);
 
     public Scene(GL3 gl3, String filepath) throws IOException {
 
@@ -53,6 +59,24 @@ public class Scene {
 
             gl3.glUniform1f(alphaUL, opacities[i]);
             gl3.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
+
+            model.render(gl3);
+        }
+    }
+    
+    public void render(GL3 gl3, int alphaUL) {
+
+        for (int i = 0; i < positions.length; i++) {
+
+//            gl3.glUniform1f(alphaUL, opacities[i]);
+            
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
+            modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
+            
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(0));
+            alphaBuffer.asFloatBuffer().put(opacities[i]);
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
 
             model.render(gl3);
         }

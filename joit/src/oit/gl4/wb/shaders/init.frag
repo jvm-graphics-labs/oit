@@ -33,27 +33,28 @@
 //----------------------------------------------------------------------------------
 
 #version 450
-#extension ARB_draw_buffers : require
+#extension GL_ARB_draw_buffers : require
 
 #define COLOR_FREQ 30.0
 #define ALPHA_FREQ 30.0
 
-// Interfaces
-#define BLOCK       0
+#include semantic.glsl
 
 layout (location = BLOCK) in Block 
 {
     vec3 interpolated;
 } inBlock;
 
-uniform float alpha;
+layout (binding = OPAQUE_DEPTH) uniform sampler2DRect opaqueDepthTex;
 
-uniform sampler2DRect opaqueDepthTex;
+layout (binding = PARAMETERS) uniform Parameters
+{
+    float alpha;
+    float depthScale;
+} params;
 
-uniform float depthScale;
-
-layout (location = 0) out vec4 sumColor;
-layout (location = 1) out vec4 sumWeight;
+layout (location = SUM_COLOR) out vec4 sumColor;
+layout (location = SUM_WEIGHT) out vec4 sumWeight;
 
 vec4 shade();
 
@@ -73,7 +74,7 @@ void main(void)
 
     // Tuned to work well with FP16 accumulation buffers and 0.001 < linearDepth < 2.5
     // See Equation (9) from http://jcgt.org/published/0002/02/09/
-    float linearDepth = viewDepth * depthScale;
+    float linearDepth = viewDepth * params.depthScale;
     float weight = clamp(0.03 / (1e-5 + pow(linearDepth, 4.0)), 1e-2, 3e3);
 
     sumColor = vec4(color.rgb * color.a, color.a) * weight;
@@ -91,8 +92,8 @@ vec4 shade()
     float i = floor(xWorldPos * COLOR_FREQ);
     float j = floor(yWorldPos * ALPHA_FREQ);
     color.rgb = (mod(i, 2.0) == 0) ? vec3(.4,.85,.0) : vec3(1.0);
-    //color.a = (mod(j, 2.0) == 0) ? alpha : 0.2;
-    color.a = alpha;
+    //color.a = (mod(j, 2.0) == 0) ? params.alpha : 0.2;
+    color.a = params.alpha;
 
     color.rgb *= diffuse;
     return color;
@@ -102,7 +103,7 @@ vec4 shade()
 {
     vec4 color;
     color.rgb = vec3(.4,.85,.0);
-    color.a = alpha;
+    color.a = params.alpha;
     return color;
 }
 #endif

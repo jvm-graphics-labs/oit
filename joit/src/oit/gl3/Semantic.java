@@ -3,7 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package oit.gl4;
+package oit.gl3;
+
+import oit.gl4.*;
 
 /**
  *

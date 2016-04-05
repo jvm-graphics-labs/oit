@@ -5,6 +5,7 @@
 package oit.gl3.dp.glsl;
 
 import com.jogamp.opengl.GL3;
+import oit.gl3.Semantic;
 
 /**
  *
@@ -16,12 +17,12 @@ public class Peel extends glsl.GLSLProgramObject {
     private int modelToWorldUL;
     private int alphaUL;
 
-    public Peel(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders, int blockBinding) {
+    public Peel(GL3 gl3, String shadersFilepath, String[] vertexShaders, String[] fragmentShaders) {
 
         super(gl3, shadersFilepath, vertexShaders, fragmentShaders);
 
         int projectionUBI = gl3.glGetUniformBlockIndex(getProgramId(), "vpMatrixes");
-        gl3.glUniformBlockBinding(getProgramId(), projectionUBI, blockBinding);
+        gl3.glUniformBlockBinding(getProgramId(), projectionUBI, Semantic.Uniform.TRANSFORM0);
 
         depthTexUL = gl3.glGetUniformLocation(getProgramId(), "depthTex");
 

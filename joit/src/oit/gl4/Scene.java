@@ -12,6 +12,7 @@ import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import oit.gl4.wb.WeightedBlendedOpaque;
 
 /**
  *
@@ -23,6 +24,7 @@ public class Scene {
     private Mat4[] positions;
     private float[] opacities;
     private ByteBuffer modelBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
+    private ByteBuffer paramsBuffer = GLBuffers.newDirectByteBuffer(2 * Float.BYTES);
 
     public Scene(GL4 gl4, String filepath) throws IOException {
 
@@ -108,14 +110,28 @@ public class Scene {
         }
     }
 
-    public void renderOpaque(GL4 gl4, int alphaUL) {
+    public void renderOpaque(GL4 gl4) {
 
+        gl4.glBindBufferBase(GL_UNIFORM_BUFFER,
+                        Semantic.Uniform.PARAMETERS,
+                        Viewer.bufferName.get(Viewer.Buffer.PARAMETERS));
+        
+        gl4.glBindBufferBase(GL_UNIFORM_BUFFER,
+                        Semantic.Uniform.TRANSFORM1,
+                        Viewer.bufferName.get(Viewer.Buffer.MODEL));
+        
         for (int i = 0; i < positions.length; i++) {
 
             if (opacities[i] == 1) {
 
-                gl4.glUniform1f(alphaUL, 1);
+                paramsBuffer.putFloat(0 * Float.BYTES, 1);
                 
+                gl4.glNamedBufferSubData(
+                        Viewer.bufferName.get(Viewer.Buffer.PARAMETERS),
+                        0,
+                        Float.BYTES,
+                        paramsBuffer);
+
                 modelBuffer.asFloatBuffer().put(positions[i].toFa_());
 
                 gl4.glNamedBufferSubData(
@@ -124,22 +140,30 @@ public class Scene {
                         glm.mat._4.Mat4.SIZE,
                         modelBuffer);
 
-                gl4.glBindBufferBase(GL_UNIFORM_BUFFER,
-                        Semantic.Uniform.TRANSFORM1,
-                        Viewer.bufferName.get(Viewer.Buffer.MODEL));
-
                 model.render(gl4);
             }
         }
     }
 
-    public void renderWaTransparent(GL4 gl4, int alphaUL) {
+    public void renderWaTransparent(GL4 gl4) {
 
         for (int i = 0; i < positions.length; i++) {
 
             if (opacities[i] < 1) {
 
-                gl4.glUniform1f(alphaUL, opacities[i]);
+                paramsBuffer
+                        .putFloat(0 * Float.BYTES, opacities[i])
+                        .putFloat(1 * Float.BYTES, WeightedBlendedOpaque.weightParameter);
+
+                gl4.glNamedBufferSubData(
+                        Viewer.bufferName.get(Viewer.Buffer.PARAMETERS),
+                        0,
+                        Float.BYTES,
+                        paramsBuffer);
+
+                gl4.glBindBufferBase(GL_UNIFORM_BUFFER,
+                        Semantic.Uniform.PARAMETERS,
+                        Viewer.bufferName.get(Viewer.Buffer.PARAMETERS));
 
                 modelBuffer.asFloatBuffer().put(positions[i].toFa_());
 

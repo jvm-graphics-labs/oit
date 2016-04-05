@@ -32,13 +32,15 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 450
 
-layout(location=0) out vec4 outColor;
+#include semantic.glsl
 
-uniform sampler2DRect ColorTex0;
-uniform sampler2DRect ColorTex1;
-uniform vec3 backgroundColor;
+layout(location = FRAG_COLOR) out vec4 outColor;
+
+layout(binding = SUM_COLOR_) uniform sampler2DRect ColorTex0;
+layout(binding = SUM_WEIGHT_) uniform sampler2DRect ColorTex1;
+layout(binding = OPAQUE_COLOR) uniform sampler2DRect opaqueColorTex;
 
 void main(void)
 {
@@ -46,6 +48,8 @@ void main(void)
     float transmittance = texture(ColorTex1, gl_FragCoord.xy).r;
     vec3 averageColor = sumColor.rgb / max(sumColor.a, 0.00001);
 
-    outColor.rgb = averageColor * (1 - transmittance) + backgroundColor * transmittance;
+    vec3 opaqueColor = texture(opaqueColorTex, gl_FragCoord.xy).rgb;
+
+    outColor.rgb = averageColor * (1 - transmittance) + opaqueColor * transmittance;
     outColor.a = 1;
 }

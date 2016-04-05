@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------------------
-// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/base_vertex.glsl
+// File:        gl4-kepler\WeightedBlendedOIT\assets\shaders/base_shade_vertex.glsl
 // SDK Version: v2.11 
 // Email:       gameworks@nvidia.com
 // Site:        http://developer.nvidia.com/
@@ -32,13 +32,38 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 450
 
-layout (location = 0) in vec3 position;
+#include semantic.glsl
 
-uniform mat4 modelToClip;
+layout (location = POSITION) in vec3 position;
+layout (location = NORMAL) in vec3 normal;
 
-void main(void)
+layout (binding = TRANSFORM0) uniform Transform0 
 {
-    gl_Position = modelToClip * vec4(position, 1.0);
+    mat4 viewProj;
+} t0;
+
+layout (binding = TRANSFORM1) uniform Transform1 
+{
+    mat4 modelToWorld;
+} t1;
+
+layout (location = BLOCK) out Block 
+{
+    vec3 interpolated;
+} outBlock;
+
+vec3 shade();
+
+void main(void) 
+{
+    gl_Position = t0.viewProj * (t1.modelToWorld * vec4(position, 1.0));
+    outBlock.interpolated = shade();
+}
+
+vec3 shade()
+{
+    float diffuse = abs(normalize(mat3(t1.modelToWorld) * normal).z);
+    return vec3(position.xy, diffuse);
 }

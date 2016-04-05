@@ -32,13 +32,18 @@
 //
 //----------------------------------------------------------------------------------
 
-#version 400
+#version 450
 
-layout (location = 0) in vec3 position;
+#include semantic.glsl
 
-uniform mat4 modelToClip;
+layout (location = POSITION) in vec3 position;
+
+layout (binding = TRANSFORM2) uniform Transform2
+{
+    mat4 modelToClip;
+} t2;
 
 void main(void)
 {
-    gl_Position = modelToClip * vec4(position, 1.0);
+    gl_Position = t2.modelToClip * vec4(position, 1.0);
 }

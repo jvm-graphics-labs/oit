@@ -4,6 +4,8 @@
  */
 package oit.gl4;
 
+import oit.InputListener;
+import oit.BufferUtils;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.Screen;
@@ -24,12 +26,13 @@ import com.jogamp.opengl.util.GLBuffers;
 import glm.glm;
 import glm.mat._4.Mat4;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jglm.Vec2i;
-import oit.gl4.wbo.WeightedBlendedOpaque;
+import oit.gl4.wb.WeightedBlendedOpaque;
 
 /**
  *
@@ -69,7 +72,6 @@ public class Viewer implements GLEventListener {
 
     public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
     private InputListener inputListener;
-    public static float projectionBase;
     private Scene scene;
     private WeightedBlendedOpaque weightedBlendedOpaque;
     private FloatBuffer viewProjBuffer = GLBuffers.newDirectFloatBuffer(16);
@@ -94,17 +96,13 @@ public class Viewer implements GLEventListener {
             Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        inputListener = new InputListener();
+        inputListener = new InputListener(animator);
         glWindow.addMouseListener(inputListener);
         glWindow.addKeyListener(inputListener);
 
-        int blockBinding = 0;
-
-        weightedBlendedOpaque = new WeightedBlendedOpaque(gl4, blockBinding);
+        weightedBlendedOpaque = new WeightedBlendedOpaque(gl4);
 
         gl4.glDisable(GL4.GL_CULL_FACE);
-
-        projectionBase = 5000f;
 
         animator.setUpdateFPSFrames(60, System.out);
     }
@@ -148,6 +146,10 @@ public class Viewer implements GLEventListener {
 
             gl4.glNamedBufferStorage(bufferName.get(Buffer.MODEL), Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
 
+            gl4.glNamedBufferStorage(bufferName.get(Buffer.MODEL_CLIP), Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
+
+            gl4.glNamedBufferStorage(bufferName.get(Buffer.PARAMETERS), 2 * Float.BYTES, null, GL_DYNAMIC_STORAGE_BIT);
+
         } else {
 
             gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.VIEW_PROJ));
@@ -155,17 +157,31 @@ public class Viewer implements GLEventListener {
 
             gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.MODEL));
             gl4.glBufferStorage(GL_UNIFORM_BUFFER, Mat4.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
+
+            Mat4 modelToClip = glm.ortho_(0, 1, 0, 1);
+            ByteBuffer buffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
+            buffer.asFloatBuffer().put(modelToClip.toFa_());
+            gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.MODEL_CLIP));
+            gl4.glBufferStorage(GL_UNIFORM_BUFFER, Mat4.SIZE, buffer, GL_DYNAMIC_STORAGE_BIT);
+
+            gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
+            gl4.glBufferStorage(GL_UNIFORM_BUFFER, 2 * Float.BYTES, null, GL_DYNAMIC_STORAGE_BIT);
+            
+            BufferUtils.destroyDirectBuffer(buffer);
         }
     }
 
     @Override
     public void dispose(GLAutoDrawable glad) {
+        
+        GL4 gl4 = glad.getGL().getGL4();        
+        weightedBlendedOpaque.dispose(gl4);
+        
         System.exit(0);
     }
 
     @Override
     public void display(GLAutoDrawable glad) {
-//        System.out.println("display");
 
         GL4 gl4 = glad.getGL().getGL4();
 
@@ -178,13 +194,13 @@ public class Viewer implements GLEventListener {
             gl4.glNamedBufferSubData(bufferName.get(Buffer.VIEW_PROJ), 0, Mat4.SIZE, viewProjBuffer);
         }
         gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM0, bufferName.get(Buffer.VIEW_PROJ));
+        gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM2, bufferName.get(Buffer.MODEL_CLIP));
 
         weightedBlendedOpaque.render(gl4, scene);
     }
 
     @Override
     public void reshape(GLAutoDrawable glad, int x, int y, int width, int height) {
-        System.out.println("reshape");
 
         GL4 gl4 = glad.getGL().getGL4();
 
@@ -201,6 +217,8 @@ public class Viewer implements GLEventListener {
 
         public static final int VIEW_PROJ = 0;
         public static final int MODEL = 1;
-        public static final int MAX = 2;
+        public static final int MODEL_CLIP = 2;
+        public static final int PARAMETERS = 3;
+        public static final int MAX = 4;
     }
 }

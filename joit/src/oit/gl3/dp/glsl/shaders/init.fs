@@ -11,23 +11,13 @@
 
 #include semantic.glsl
 
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
+vec4 ShadeFragment();
 
-smooth out vec3 interpolated;
+layout (location = FRAG_COLOR) out vec4 outputColor;
 
-uniform mat4 modelToWorld;
+void main(void)
+{
+    vec4 color = ShadeFragment();
 
-layout(std140) uniform vpMatrixes  {
-
-    mat4 worldToCamera;
-    mat4 cameraToClip;
-};
-
-vec3 ShadeVertex();
-
-void main(void) {
-
-    gl_Position = cameraToClip * worldToCamera * modelToWorld * vec4(position, 1.0);
-    interpolated = ShadeVertex();
+    outputColor = vec4(color.rgb * color.a, 1.0 - color.a);
 }

@@ -12,11 +12,7 @@
 #define COLOR_FREQ 30.0
 #define ALPHA_FREQ 30.0
 
-// Interfaces
-#define BLOCK       0
-
-// Outputs
-#define FRAG_COLOR  0
+#include semantic.glsl
 
 layout (location = FRAG_COLOR) out vec4 outputColor;
 
@@ -25,7 +21,11 @@ layout (location = BLOCK) in Block
     vec3 interpolated;
 } inBlock;
 
-uniform float alpha;
+layout (binding = PARAMETERS) uniform Parameters
+{
+    float alpha;
+    float depthScale;
+} params;
 
 vec4 shade();
 
@@ -46,7 +46,7 @@ vec4 shade()
     float j = floor(yWorldPos * ALPHA_FREQ);
     color.rgb = (mod(i, 2.0) == 0) ? vec3(.4,.85,.0) : vec3(1.0);
     //color.a = (mod(j, 2.0) == 0) ? alpha : 0.2;
-    color.a = alpha;
+    color.a = params.alpha;
 
     color.rgb *= diffuse;
     return color;
@@ -56,7 +56,7 @@ vec4 shade()
 {
     vec4 color;
     color.rgb = vec3(.4,.85,.0);
-    color.a = alpha;
+    color.a = params.alpha;
     return color;
 }
 #endif

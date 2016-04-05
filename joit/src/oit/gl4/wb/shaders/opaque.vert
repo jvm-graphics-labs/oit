@@ -9,21 +9,7 @@
 
 #version 450
 
-// Vertex attributes
-#define POSITION    0
-#define NORMAL      1
-
-// Uniform
-#define TRANSFORM0  0
-#define TRANSFORM1  1
-
-// Interfaces
-#define BLOCK       0
-
-precision highp float;
-precision highp int;
-layout(std140, column_major) uniform;
-layout(std430, column_major) buffer;
+#include semantic.glsl
 
 layout (location = POSITION) in vec3 position;
 layout (location = NORMAL) in vec3 normal;
