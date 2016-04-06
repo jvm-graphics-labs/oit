@@ -9,21 +9,16 @@
 
 #version 330
 
-uniform sampler2DRect opaqueDepthTex;
+#include semantic.glsl
 
-out vec4 outputColor;
+layout (location = POSITION) in vec2 position;
 
-vec4 ShadeFragment();
+uniform Transform2
+{
+    mat4 modelToClip;
+} t2;
 
 void main(void)
 {
-    float opaqueDepth = texture(opaqueDepthTex, gl_FragCoord.xy).r;
-
-    if (gl_FragCoord.z > opaqueDepth) {
-        discard;
-    }
-
-    vec4 color = ShadeFragment();
-
-    outputColor = vec4(color.rgb * color.a, 1.0 - color.a);
+     gl_Position = t2.modelToClip * vec4(position, 0.0, 1.0);
 }

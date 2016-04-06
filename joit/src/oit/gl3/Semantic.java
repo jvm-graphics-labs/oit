@@ -66,11 +66,13 @@ public class Semantic {
         public static final int DIFFUSE = 0;
         public static final int SUM_COLOR = 1;
         public static final int SUM_WEIGHT = 2;
-        public static final int OPAQUE_DEPTH = 0;
-        public static final int OPAQUE_COLOR = 3;
+        public static final int OPAQUE_DEPTH = 1;
+        public static final int OPAQUE_COLOR = 1;
         public static final int POSITION = 4;
         public static final int TEXCOORD = 5;
-        public static final int COLOR = 6;
+        public static final int DEPTH = 0;
+        public static final int TEMP = 0;
+        public static final int COLOR = 0;
     }
 
     public static class Storage {

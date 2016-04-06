@@ -9,54 +9,26 @@
 
 #version 330
 
-#define COLOR_FREQ 30.0
-#define ALPHA_FREQ 30.0
+#include semantic.glsl
 
-smooth in vec3 interpolated;
-
-uniform float alpha;
+vec4 shadeFragment();
 
 uniform sampler2DRect depthTex;
 uniform sampler2DRect opaqueDepthTex;
 
-out vec4 outputColor;
+layout (location = FRAG_COLOR) out vec4 outputColor;
 
-#if 1
-vec4 shadeFragment()
-{
-    float xWorldPos = interpolated.x;
-    float yWorldPos = interpolated.y;
-    float diffuse = interpolated.z;
-
-    vec4 color;
-    float i = floor(xWorldPos * COLOR_FREQ);
-    float j = floor(yWorldPos * ALPHA_FREQ);
-    color.rgb = (mod(i, 2.0) == 0) ? vec3(.4,.85,.0) : vec3(1.0);
-    //color.a = (mod(j, 2.0) == 0) ? alpha : 0.2;
-    color.a = alpha;
-
-    color.rgb *= diffuse;
-    return color;
-}
-#else
-vec4 shadeFragment()
-{
-    vec4 color;
-    color.rgb = vec3(.4,.85,.0);
-    color.a = alpha;
-    return color;
-}
-#endif
+vec4 shadeFragment();
 
 void main(void)
 {
     // Bit-exact comparison between FP32 z-buffer and fragment depth
     float frontDepth = texture(depthTex, gl_FragCoord.xy).r;
     float opaqueDepth = texture(opaqueDepthTex, gl_FragCoord.xy).r;
+    //if (gl_FragCoord.z <= frontDepth) {
     if (gl_FragCoord.z <= frontDepth || gl_FragCoord.z > opaqueDepth) {
         discard;
     }
-
     // Shade all the fragments behind the z-buffer
     vec4 color = shadeFragment();
     outputColor = vec4(color.rgb * color.a, color.a);

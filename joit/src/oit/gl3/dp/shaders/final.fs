@@ -9,14 +9,16 @@
 
 #version 330
 
+#include semantic.glsl
+
 uniform sampler2DRect colorTex;
 uniform sampler2DRect opaqueColorTex;
 
-out vec4 outputColor;
+layout (location = FRAG_COLOR) out vec4 outputColor;
 
 void main(void)
 {
     vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
-    vec4 opaqueColor = texture(opaqueColorTex, gl_FragCoord.xy);
-    outputColor.rgb = frontColor.rgb + opaqueColor.rgb * frontColor.a;
+    vec3 opaqueColor = texture(opaqueColorTex, gl_FragCoord.xy).rgb;
+    outputColor = vec4(frontColor.rgb + opaqueColor * frontColor.a, 1);
 }

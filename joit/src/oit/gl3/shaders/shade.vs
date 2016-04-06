@@ -9,13 +9,18 @@
 
 #version 330
 
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
+#include semantic.glsl
 
-uniform mat4 modelToWorld;
+layout (location = POSITION) in vec3 position;
+layout (location = NORMAL) in vec3 normal;
 
-vec3 ShadeVertex()
+uniform Transform1
 {
-	float diffuse = abs(normalize(mat3(modelToWorld) * normal).z);
-	return vec3(position.xy, diffuse);
+    mat4 model;
+} t1;
+
+vec3 shadeVertex()
+{
+    float diffuse = abs(normalize(mat3(t1.model) * normal).z);
+    return vec3(position.xy, diffuse);
 }

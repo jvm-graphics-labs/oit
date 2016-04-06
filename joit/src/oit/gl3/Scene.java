@@ -26,12 +26,11 @@ public class Scene {
     private ByteBuffer modelBuffer = GLBuffers.newDirectByteBuffer(glm.mat._4.Mat4.SIZE),
             alphaBuffer = GLBuffers.newDirectByteBuffer(Float.BYTES);
 
-    public Scene(GL3 gl3, String filepath) throws IOException {
+    public Scene(GL3 gl3) throws IOException {
 
-        model = new Model(gl3, filepath);
+        model = new Model(gl3);
 
 //        Mat4 m0 = Mat4.translate(new Vec3(0f, 0f, 0f));
-
         Mat4 m0 = Mat4.translate(new Vec3(.1f, 0f, 0f));
         Mat4 m1 = Mat4.translate(new Vec3(-.1f, 0f, 0f));
         Mat4 m2 = Mat4.translate(new Vec3(0f, 0f, .1f));
@@ -49,7 +48,7 @@ public class Scene {
         positions = new Mat4[]{m0, m1, m2, m3};
 //        positions = new Mat4[]{m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11};
 //        opacities = new float[]{.6f};
-        opacities = new float[]{1f, 1f, .6f, .6f};
+        opacities = new float[]{1f, 1f, .5f, .5f};
 //        opacities = new float[]{1f, 1f, .6f, .6f, 1f, 1f, .6f, .6f, 1f, 1f, .6f, .6f};
     }
 
@@ -59,24 +58,6 @@ public class Scene {
 
             gl3.glUniform1f(alphaUL, opacities[i]);
             gl3.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
-
-            model.render(gl3);
-        }
-    }
-    
-    public void render(GL3 gl3, int alphaUL) {
-
-        for (int i = 0; i < positions.length; i++) {
-
-//            gl3.glUniform1f(alphaUL, opacities[i]);
-            
-            gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
-            modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
-            
-            gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(0));
-            alphaBuffer.asFloatBuffer().put(opacities[i]);
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
 
             model.render(gl3);
         }
@@ -103,6 +84,56 @@ public class Scene {
 
                 gl3.glUniform1f(alphaUL, opacities[i]);
                 gl3.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
+
+                model.render(gl3);
+            }
+        }
+    }
+
+    public void render(GL3 gl3) {
+
+        for (int i = 0; i < positions.length; i++) {
+
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
+            modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
+
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(0));
+            alphaBuffer.asFloatBuffer().put(opacities[i]);
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
+
+            model.render(gl3);
+        }
+    }
+
+    public void renderOpaque(GL3 gl3) {
+
+        for (int i = 0; i < positions.length; i++) {
+
+            if (opacities[i] == 1) {
+
+                gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
+                modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
+                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
+
+                model.render(gl3);
+            }
+        }
+    }
+
+    public void renderTransparent(GL3 gl3) {
+
+        for (int i = 0; i < positions.length; i++) {
+
+            if (opacities[i] < 1) {
+
+                gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
+                modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
+                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
+
+                gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(0));
+                alphaBuffer.asFloatBuffer().put(opacities[i]);
+                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
 
                 model.render(gl3);
             }

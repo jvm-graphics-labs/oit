@@ -9,13 +9,16 @@
 
 #version 330
 
-vec4 ShadeFragment();
+#include semantic.glsl
 
-out vec4 outputColor;
+layout (location = POSITION) in vec2 position;
+
+uniform Transform2
+{
+    mat4 modelToClip;
+} t2;
 
 void main(void)
 {
-    vec4 color = ShadeFragment();
-
-    outputColor = vec4(color.rgb * color.a, 1.0 - color.a);
+     gl_Position = t2.modelToClip * vec4(position, 0.0, 1.0);
 }

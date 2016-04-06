@@ -11,13 +11,26 @@
 
 #include semantic.glsl
 
-vec4 ShadeFragment();
+layout (location = POSITION) in vec3 position;
+layout (location = NORMAL) in vec3 normal;
 
-layout (location = FRAG_COLOR) out vec4 outputColor;
+out vec3 interpolated;
 
-void main(void)
+uniform Transform0
 {
-    vec4 color = ShadeFragment();
+    mat4 view;
+    mat4 proj;
+} t0;
 
-    outputColor = vec4(color.rgb * color.a, 1.0 - color.a);
+uniform Transform1
+{
+    mat4 model;
+} t1;
+
+vec3 shadeVertex();
+
+void main(void) 
+{
+    gl_Position = t0.proj * t0.view * t1.model * vec4(position, 1.0);
+    interpolated = shadeVertex();
 }

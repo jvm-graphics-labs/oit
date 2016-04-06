@@ -9,15 +9,13 @@
 
 #version 330
 
-uniform sampler2DRect colorTex;
+#include semantic.glsl
 
-uniform vec3 backgroundColor;
+layout (location = FRAG_COLOR) out vec4 outputColor;
 
-out vec4 outputColor;
+vec4 shadeFragment();
 
 void main(void)
 {
-    vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
-    outputColor.rgb = frontColor.rgb + backgroundColor * frontColor.a;
-    outputColor.a = 1;
+    outputColor = shadeFragment();
 }

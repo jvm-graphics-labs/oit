@@ -5,7 +5,6 @@
  */
 package oit.gl3;
 
-import oit.gl3.dpo.DepthPeelingOpaque;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL3;
 import java.io.BufferedReader;
@@ -38,7 +37,7 @@ public final class Model {
     private int[] objects;
     private Vec3 center;
 
-    public Model(GL3 gl3, String filename) throws IOException {
+    public Model(GL3 gl3) throws IOException {
         
         positions_ = new ArrayList<>();
         normals_ = new ArrayList<>();
@@ -50,7 +49,7 @@ public final class Model {
         vertices_ = null;
         vtxSize_ = 0;
 
-        load(filename);
+        load(Viewer.MODEL);
 
         compile();
 
@@ -79,8 +78,6 @@ public final class Model {
             gl3.glBindVertexArray(0);
         }
         gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, 0);
-
-        DepthPeelingOpaque.numGeoPasses++;
     }
 
     public void computeBoundingBox() {

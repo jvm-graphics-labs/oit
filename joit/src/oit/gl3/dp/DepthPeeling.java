@@ -5,25 +5,32 @@
  */
 package oit.gl3.dp;
 
-import static com.jogamp.opengl.GL.GL_DYNAMIC_DRAW;
+import static com.jogamp.opengl.GL.GL_COLOR_ATTACHMENT0;
+import static com.jogamp.opengl.GL.GL_DEPTH_ATTACHMENT;
+import static com.jogamp.opengl.GL.GL_FLOAT;
+import static com.jogamp.opengl.GL.GL_FRAMEBUFFER;
+import static com.jogamp.opengl.GL.GL_FRAMEBUFFER_COMPLETE;
+import static com.jogamp.opengl.GL.GL_RGBA;
+import static com.jogamp.opengl.GL2ES2.GL_DEPTH_COMPONENT;
 import static com.jogamp.opengl.GL2ES2.GL_FRAGMENT_SHADER;
 import static com.jogamp.opengl.GL2ES2.GL_VERTEX_SHADER;
-import static com.jogamp.opengl.GL2ES3.GL_UNIFORM_BUFFER;
+import static com.jogamp.opengl.GL2ES3.GL_DEPTH_COMPONENT32F;
+import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_BASE_LEVEL;
+import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LEVEL;
+import static com.jogamp.opengl.GL2GL3.*;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import jglm.Jglm;
-import jglm.Mat4;
-import jglm.Vec3;
+import oit.BufferUtils;
 import oit.gl3.FullscreenQuad;
 import oit.gl3.Scene;
 import oit.gl3.Semantic;
 import oit.gl3.Viewer;
-import oit.gl3.dp.glsl.Blend;
-import oit.gl3.dp.glsl.Final;
-import oit.gl3.dp.glsl.Peel;
 
 /**
  *
@@ -31,24 +38,13 @@ import oit.gl3.dp.glsl.Peel;
  */
 public class DepthPeeling {
 
-    private static final String SHADERS_ROOT = "/oit/gl3/dp/glsl/shaders/";
+    private static final String SHADERS_ROOT = "/oit/gl3/dp/shaders/";
     private static final String[] SHADERS_SRC = new String[]{"init", "peel", "blend", "final"};
-//    private Init init;
-    private Peel peel;
-    private Blend blend;
-    private Final finale;
-    private int[] depthTexId;
-    private int[] colorTexId;
-    private int[] fboId;
-    private int[] colorBlenderTexId;
-    private int[] colorBlenderFboId;
     private FullscreenQuad fullscreenQuad;
-    private int[] queryId;
-    public static int numGeoPasses;
-    public int numPasses;
-    private boolean useOQ;
-    private int[] sampler;
-    private Vec3 backgroundColor;
+    public static int numGeoPasses = 0;
+    public int numPasses = 4;
+    private boolean useOQ = true;
+    private FloatBuffer clearColor = GLBuffers.newDirectFloatBuffer(4), clearDepth = GLBuffers.newDirectFloatBuffer(1);
 
     private class Program {
 
@@ -59,97 +55,148 @@ public class DepthPeeling {
         public final static int MAX = 4;
     }
 
+    private class Buffer {
+
+        public final static int PARAMETERS = 0;
+        public final static int TRANSFORM2 = 1;
+        public final static int MAX = 2;
+    }
+
+    private class Texture {
+
+        public final static int DEPTH0 = 0;
+        public final static int DEPTH1 = 1;
+        public final static int COLOR0 = 2;
+        public final static int COLOR1 = 3;
+        public final static int COLOR_BLENDER = 4;
+        public final static int MAX = 7;
+    }
+
+    private class Framebuffer {
+
+        public final static int _0 = 0;
+        public final static int _1 = 1;
+        public final static int COLOR_BLENDER = 2;
+        public final static int MAX = 4;
+    }
+
     private int[] programName = new int[Program.MAX];
-    public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(1);
+    public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
+    private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX),
+            framebufferName = GLBuffers.newDirectIntBuffer(Framebuffer.MAX),
+            queryName = GLBuffers.newDirectIntBuffer(1), samplerName = GLBuffers.newDirectIntBuffer(1),
+            samplesCount = GLBuffers.newDirectIntBuffer(1);
 
     public DepthPeeling(GL3 gl3) {
 
         initBuffers(gl3);
-        
+
         initPrograms(gl3);
 
         initSampler(gl3);
 
-        initQuery(gl3);
-
-        numGeoPasses = 0;
-        numPasses = 4;
-        useOQ = true;
-
-        backgroundColor = new Vec3(1f, 1f, 1f);
+        gl3.glGenQueries(1, queryName);
 
         fullscreenQuad = new FullscreenQuad(gl3);
+
+        clearDepth.put(new float[]{1}).rewind();
     }
 
     private void initBuffers(GL3 gl3) {
-        
-        gl3.glGenBuffers(1, bufferName);
-        
-        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(0));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, null, GL_DYNAMIC_DRAW);
-        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(0));
-    }
-    
-    private void initPrograms(GL3 gl3) {
-        
-        System.out.print("initPrograms... ");
 
-        {
+        gl3.glGenBuffers(Buffer.MAX, bufferName);
+
+        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, null, GL_DYNAMIC_DRAW);
+        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
+
+        ByteBuffer modelToClip = GLBuffers.newDirectByteBuffer(glm.mat._4.Mat4.SIZE);
+        modelToClip.asFloatBuffer().put(Jglm.orthographic2D(0, 1, 0, 1).toFloatArray());
+
+        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
+        gl3.glBufferData(GL_UNIFORM_BUFFER, glm.mat._4.Mat4.SIZE, modelToClip, GL_DYNAMIC_DRAW);
+        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM2, bufferName.get(Buffer.TRANSFORM2));
+
+        BufferUtils.destroyDirectBuffer(modelToClip);
+    }
+
+    private void initPrograms(GL3 gl3) {
+
+        // init & peel
+        for (int program = Program.INIT; program <= Program.PEEL; program++) {
+
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vs", null, null, null, true);
+                    new String[]{SHADERS_SRC[program], "shade"}, "vs", null, null, null, true);
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
+                    new String[]{SHADERS_SRC[program], "shade"}, "fs", null, null, null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
             shaderProgram.add(fragShader);
 
             shaderProgram.link(gl3, System.out);
-            
-            programName[Program.INIT] = shaderProgram.program();
+
+            programName[program] = shaderProgram.program();
 
             gl3.glUniformBlockBinding(
-                    shaderProgram.program(), 
-                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform0"), 
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Transform0"),
                     Semantic.Uniform.TRANSFORM0);
 
             gl3.glUniformBlockBinding(
-                    shaderProgram.program(), 
-                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform1"), 
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Transform1"),
                     Semantic.Uniform.TRANSFORM1);
 
             gl3.glUniformBlockBinding(
-                    shaderProgram.program(), 
-                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"), 
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Parameters"),
                     Semantic.Uniform.PARAMETERS);
-        }
-        peel = new Peel(gl3, SHADERS_ROOT, new String[]{"peel_VS.glsl", "shade_VS.glsl"},
-                new String[]{"peel_FS.glsl", "shade_FS.glsl"});
-        peel.bind(gl3);
-        {
-            gl3.glUniform1i(peel.getDepthTexUL(), 0);
-        }
-        peel.unbind(gl3);
 
-        Mat4 modelToClip = Jglm.orthographic2D(0, 1, 0, 1);
-
-        blend = new Blend(gl3, SHADERS_ROOT, "blend_VS.glsl", "blend_FS.glsl");
-        blend.bind(gl3);
-        {
-            gl3.glUniform1i(blend.getTempTexUL(), 0);
-            gl3.glUniformMatrix4fv(blend.getModelToClipUL(), 1, false, modelToClip.toFloatArray(), 0);
+            gl3.glUseProgram(programName[program]);
+            gl3.glUniform1i(gl3.glGetUniformLocation(programName[program], "opaqueDepthTex"),
+                    Semantic.Sampler.OPAQUE_DEPTH);
         }
-        blend.unbind(gl3);
 
-        finale = new Final(gl3, SHADERS_ROOT, "final_VS.glsl", "final_FS.glsl");
-        finale.bind(gl3);
-        {
-            gl3.glUniform1i(finale.getColorTexUL(), 0);
-            gl3.glUniformMatrix4fv(finale.getModelToClipUL(), 1, false, modelToClip.toFloatArray(), 0);
+        gl3.glUseProgram(programName[Program.PEEL]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.PEEL], "depthTex"),
+                Semantic.Sampler.DEPTH);
+
+        // blend & final
+        for (int program = Program.BLEND; program <= Program.FINAL; program++) {
+
+            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[program], "vs", null, true);
+            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[program], "fs", null, true);
+
+            ShaderProgram shaderProgram = new ShaderProgram();
+            shaderProgram.add(vertShader);
+            shaderProgram.add(fragShader);
+
+            shaderProgram.link(gl3, System.out);
+
+            programName[program] = shaderProgram.program();
+
+            gl3.glUniformBlockBinding(
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Transform2"),
+                    Semantic.Uniform.TRANSFORM2);
         }
-        finale.unbind(gl3);
 
-        System.out.println("ok");
+        gl3.glUseProgram(programName[Program.BLEND]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.BLEND], "tempTex"),
+                Semantic.Sampler.TEMP);
+
+        gl3.glUseProgram(programName[Program.FINAL]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.FINAL], "colorTex"),
+                Semantic.Sampler.COLOR);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.FINAL], "opaqueColorTex"),
+                Semantic.Sampler.OPAQUE_COLOR);
     }
 
     public void render(GL3 gl3, Scene scene) {
@@ -158,22 +205,22 @@ public class DepthPeeling {
         /**
          * (1) Initialize Min Depth Buffer.
          */
-        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, colorBlenderFboId[0]);
-        gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
+        gl3.glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
-        gl3.glClearColor(0, 0, 0, 1);
-        gl3.glClear(GL3.GL_COLOR_BUFFER_BIT | GL3.GL_DEPTH_BUFFER_BIT);
+        clearColor.put(new float[]{0, 0, 0, 1}).rewind();
+        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
+        gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
 
-        gl3.glEnable(GL3.GL_DEPTH_TEST);
+        gl3.glEnable(GL_DEPTH_TEST);
 
-//        init.bind(gl3);
         gl3.glUseProgram(programName[Program.INIT]);
-        {
-//            scene.render(gl3, modelUL, alphaUL);
-            scene.render(gl3, 0);
-        }
-//        init.unbind(gl3);
-        gl3.glUseProgram(0);
+
+        gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.OPAQUE_DEPTH);
+        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, Viewer.textureName.get(Viewer.Texture.DEPTH));
+        gl3.glBindSampler(Semantic.Sampler.OPAQUE_DEPTH, samplerName.get(0));
+
+        scene.renderTransparent(gl3);
         /**
          * (2) Depth Peeling + Blending.
          *
@@ -195,64 +242,58 @@ public class DepthPeeling {
             int currId = layer % 2;
             int prevId = 1 - currId;
 
-            gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, fboId[currId]);
-            gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
+            gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer._0 + currId));
+            gl3.glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
-            gl3.glClearColor(0, 0, 0, 0);
-            gl3.glClear(GL3.GL_COLOR_BUFFER_BIT | GL3.GL_DEPTH_BUFFER_BIT);
+            clearColor.put(3, 0);
+            gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
+            gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
 
-            gl3.glDisable(GL3.GL_BLEND);
-            gl3.glEnable(GL3.GL_DEPTH_TEST);
-
-            if (useOQ) {
-                gl3.glBeginQuery(GL3.GL_SAMPLES_PASSED, queryId[0]);
-            }
-
-            peel.bind(gl3);
-            {
-                gl3.glActiveTexture(GL3.GL_TEXTURE0);
-                gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, depthTexId[prevId]);
-                gl3.glBindSampler(0, sampler[0]);
-                {
-                    scene.render(gl3, peel.getModelToWorldUL(), peel.getAlphaUL());
-                }
-                gl3.glBindSampler(0, 0);
-                gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
-            }
-            peel.unbind(gl3);
+            gl3.glDisable(GL_BLEND);
+            gl3.glEnable(GL_DEPTH_TEST);
 
             if (useOQ) {
-                gl3.glEndQuery(GL3.GL_SAMPLES_PASSED);
+                gl3.glBeginQuery(GL_SAMPLES_PASSED, queryName.get(0));
             }
 
-            gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, colorBlenderFboId[0]);
-            gl3.glDrawBuffer(GL3.GL_COLOR_ATTACHMENT0);
+            gl3.glUseProgram(programName[Program.PEEL]);
 
-            gl3.glDisable(GL3.GL_DEPTH_TEST);
-            gl3.glEnable(GL3.GL_BLEND);
+            gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.DEPTH);
+            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.DEPTH0 + prevId));
+            gl3.glBindSampler(Semantic.Sampler.DEPTH, samplerName.get(0));
 
-            gl3.glBlendEquation(GL3.GL_FUNC_ADD);
-            gl3.glBlendFuncSeparate(GL3.GL_DST_ALPHA, GL3.GL_ONE, GL3.GL_ZERO, GL3.GL_ONE_MINUS_SRC_ALPHA);
+            gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.OPAQUE_DEPTH);
+            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, Viewer.textureName.get(Viewer.Texture.DEPTH));
+            gl3.glBindSampler(Semantic.Sampler.OPAQUE_DEPTH, samplerName.get(0));
 
-            blend.bind(gl3);
-            {
-                gl3.glActiveTexture(GL3.GL_TEXTURE0);
-                gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorTexId[currId]);
-                gl3.glBindSampler(0, sampler[0]);
-                {
-                    fullscreenQuad.render(gl3);
-                }
-                gl3.glBindSampler(0, 0);
-                gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
-            }
-            blend.unbind(gl3);
-
-            gl3.glDisable(GL3.GL_BLEND);
+            scene.renderTransparent(gl3);
 
             if (useOQ) {
-                int[] samplesCount = new int[1];
-                gl3.glGetQueryObjectuiv(queryId[0], GL3.GL_QUERY_RESULT, samplesCount, 0);
-                if (samplesCount[0] == 0) {
+                gl3.glEndQuery(GL_SAMPLES_PASSED);
+            }
+
+            gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
+            gl3.glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+            gl3.glDisable(GL_DEPTH_TEST);
+            gl3.glEnable(GL_BLEND);
+
+            gl3.glBlendEquation(GL_FUNC_ADD);
+            gl3.glBlendFuncSeparate(GL_DST_ALPHA, GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+
+            gl3.glUseProgram(programName[Program.BLEND]);
+
+            gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.TEMP);
+            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR0 + currId));
+            gl3.glBindSampler(Semantic.Sampler.TEMP, samplerName.get(0));
+
+            fullscreenQuad.render(gl3);
+
+            gl3.glDisable(GL_BLEND);
+
+            if (useOQ) {
+                gl3.glGetQueryObjectuiv(queryName.get(0), GL_QUERY_RESULT, samplesCount);
+                if (samplesCount.get(0) == 0) {
                     break;
                 }
             }
@@ -260,28 +301,21 @@ public class DepthPeeling {
         /**
          * (3) Final Pass.
          */
-        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
-        gl3.glDrawBuffer(GL3.GL_BACK);
-        gl3.glDisable(GL3.GL_DEPTH_TEST);
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        gl3.glDrawBuffer(GL_BACK);
+        gl3.glDisable(GL_DEPTH_TEST);
 
-        finale.bind(gl3);
-        {
-            gl3.glActiveTexture(GL3.GL_TEXTURE0);
-            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorBlenderTexId[0]);
-            gl3.glBindSampler(0, sampler[0]);
-            {
-                gl3.glUniform3f(finale.getBackgroundColorUL(), backgroundColor.x, backgroundColor.y, backgroundColor.z);
-                {
-                    fullscreenQuad.render(gl3);
-                }
-                gl3.glBindSampler(1, 0);
-            }
-            gl3.glBindSampler(0, 0);
-            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
-        }
-        finale.unbind(gl3);
+        gl3.glUseProgram(programName[Program.FINAL]);
 
-//        System.out.println("numGeoPasses " + numGeoPasses);
+        gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.COLOR);
+        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR_BLENDER));
+        gl3.glBindSampler(Semantic.Sampler.COLOR, samplerName.get(0));
+
+        gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.OPAQUE_COLOR);
+        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, Viewer.textureName.get(Viewer.Texture.COLOR));
+        gl3.glBindSampler(Semantic.Sampler.OPAQUE_COLOR, samplerName.get(0));
+
+        fullscreenQuad.render(gl3);
     }
 
     public void reshape(GL3 gl3, int width, int height) {
@@ -291,142 +325,72 @@ public class DepthPeeling {
     }
 
     private void initRenderTargets(GL3 gl3) {
-        /**
-         * Default Depth Peeling resources.
-         */
-        depthTexId = new int[2];
-        colorTexId = new int[2];
-        fboId = new int[2];
 
-        gl3.glGenTextures(depthTexId.length, depthTexId, 0);
-        gl3.glGenTextures(colorTexId.length, colorTexId, 0);
-        gl3.glGenFramebuffers(fboId.length, fboId, 0);
+        gl3.glGenTextures(Texture.MAX, textureName);
+        gl3.glGenFramebuffers(Framebuffer.MAX, framebufferName);
 
         for (int i = 0; i < 2; i++) {
 
-            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, depthTexId[i]);
+            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.DEPTH0 + i));
 
-            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+            gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
+            gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_DEPTH_COMPONENT32F,
-                    Viewer.imageSize.x, Viewer.imageSize.y, 0, GL3.GL_DEPTH_COMPONENT, GL3.GL_FLOAT, null);
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT32F, Viewer.imageSize.x, Viewer.imageSize.y, 0,
+                    GL_DEPTH_COMPONENT, GL_FLOAT, null);
 
-            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorTexId[i]);
+            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR0 + i));
 
-            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-            gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
+            gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
+            gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA,
-                    Viewer.imageSize.x, Viewer.imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Viewer.imageSize.x, Viewer.imageSize.y, 0, GL_RGBA,
+                    GL_FLOAT, null);
 
-            gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, fboId[i]);
+            gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer._0 + i));
 
-            gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_DEPTH_ATTACHMENT,
-                    GL3.GL_TEXTURE_RECTANGLE, depthTexId[i], 0);
-            gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,
-                    GL3.GL_TEXTURE_RECTANGLE, colorTexId[i], 0);
+            gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_RECTANGLE,
+                    textureName.get(Texture.DEPTH0 + i), 0);
+            gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
+                    textureName.get(Texture.COLOR0 + i), 0);
 
-            checkBindedFrameBuffer(gl3);
-        }
-        colorBlenderTexId = new int[1];
-        gl3.glGenTextures(1, colorBlenderTexId, 0);
-
-        gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, colorBlenderTexId[0]);
-
-        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
-
-        gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA,
-                Viewer.imageSize.x, Viewer.imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
-
-        colorBlenderFboId = new int[1];
-        gl3.glGenFramebuffers(1, colorBlenderFboId, 0);
-
-        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, colorBlenderFboId[0]);
-        gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_DEPTH_ATTACHMENT,
-                GL3.GL_TEXTURE_RECTANGLE, depthTexId[0], 0);
-        gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,
-                GL3.GL_TEXTURE_RECTANGLE, colorBlenderTexId[0], 0);
-
-        checkBindedFrameBuffer(gl3);
-    }
-
-    private void checkBindedFrameBuffer(GL3 gl3) {
-
-        int frameBufferStatus = gl3.glCheckFramebufferStatus(GL3.GL_FRAMEBUFFER);
-
-        if (frameBufferStatus != GL3.GL_FRAMEBUFFER_COMPLETE) {
-
-            System.out.println("FrameBuffer Incomplete!");
-
-            switch (frameBufferStatus) {
-
-                case GL3.GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-                    System.out.println("GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
-                    break;
-
-                case GL3.GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-                    System.out.println("GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS");
-                    break;
-
-                case GL3.GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-                    System.out.println("GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER");
-                    break;
-
-                case GL3.GL_FRAMEBUFFER_INCOMPLETE_FORMATS:
-                    System.out.println("GL_FRAMEBUFFER_INCOMPLETE_FORMATS");
-                    break;
-
-                case GL3.GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-                    System.out.println("GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
-                    break;
-
-                case GL3.GL_FRAMEBUFFER_UNSUPPORTED:
-                    System.out.println("GL_FRAMEBUFFER_UNSUPPORTED");
-                    break;
+            if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+                throw new Error("framebuffer " + framebufferName.get(Framebuffer._0 + i) + " incomplete!");
             }
+        }
+
+        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR_BLENDER));
+
+        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
+
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Viewer.imageSize.x, Viewer.imageSize.y, 0, GL_RGBA, GL_FLOAT,
+                null);
+
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
+        gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_RECTANGLE,
+                textureName.get(Texture.DEPTH0), 0);
+        gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
+                textureName.get(Texture.COLOR_BLENDER), 0);
+
+        if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            throw new Error("framebuffer " + framebufferName.get(Framebuffer.COLOR_BLENDER) + " incomplete!");
         }
     }
 
     private void deleteRenderTargets(GL3 gl3) {
 
-        if (fboId != null) {
-            gl3.glDeleteFramebuffers(fboId.length, fboId, 0);
-            fboId = null;
-        }
-        if (colorBlenderFboId != null) {
-            gl3.glDeleteFramebuffers(colorBlenderFboId.length, colorBlenderFboId, 0);
-            colorBlenderFboId = null;
-        }
-        if (depthTexId != null) {
-            gl3.glDeleteTextures(depthTexId.length, depthTexId, 0);
-            depthTexId = null;
-        }
-        if (colorTexId != null) {
-            gl3.glDeleteTextures(colorTexId.length, colorTexId, 0);
-            colorTexId = null;
-        }
-        if (colorBlenderTexId != null) {
-            gl3.glDeleteTextures(colorBlenderTexId.length, colorBlenderTexId, 0);
-            colorBlenderTexId = null;
-        }
+        gl3.glDeleteFramebuffers(Framebuffer.MAX, framebufferName);
+        gl3.glDeleteTextures(Texture.MAX, textureName);
     }
 
     private void initSampler(GL3 gl3) {
 
-        sampler = new int[1];
-        gl3.glGenSamplers(1, sampler, 0);
+        gl3.glGenSamplers(1, samplerName);
 
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
-    }
-
-    private void initQuery(GL3 gl3) {
-
-        queryId = new int[1];
-        gl3.glGenQueries(1, queryId, 0);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 }

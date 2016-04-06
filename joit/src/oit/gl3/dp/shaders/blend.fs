@@ -9,9 +9,11 @@
 
 #version 330
 
+#include semantic.glsl
+
 uniform sampler2DRect tempTex;
 
-out vec4 outputColor;
+layout (location = FRAG_COLOR) out vec4 outputColor;
 
 void main(void)
 {
