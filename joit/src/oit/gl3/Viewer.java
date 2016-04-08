@@ -4,6 +4,7 @@
  */
 package oit.gl3;
 
+import oit.gl3.dp.DepthPeeling;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.Screen;
@@ -22,19 +23,18 @@ import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import glm.glm;
 import glm.mat._4.Mat4;
+import glm.vec._2.i.Vec2i;
+import glm.vec._3.Vec3;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jglm.Vec2i;
 import oit.InputListener;
 import oit.gl3.ddp.DualDepthPeeling;
-import oit.gl3.dp.DepthPeeling;
 import oit.gl3.wa.WeightedAverage;
 import oit.gl3.wb.WeightedBlended;
-import oit.gl3.wbo.WeightedBlendedOpaque;
 import oit.gl3.ws.WeightedSum;
 
 /**
@@ -77,12 +77,17 @@ public class Viewer implements GLEventListener {
         glWindow.setVisible(true);
     }
 
-    private DepthPeeling depthPeeling;
     private DualDepthPeeling dualDepthPeeling;
     private WeightedSum weightedSum;
     private WeightedAverage weightedAverage;
     private WeightedBlended weightedBlended;
-    private WeightedBlendedOpaque weightedBlendedOpaque;
+
+    public class Oit {
+
+        public static final int DEPTH_PEELING = 0;
+        public static final int DUAL_DEPTH_PEELING = 1;
+        public static final int MAX = 2;
+    }
 
     public class Buffer {
 
@@ -106,11 +111,11 @@ public class Viewer implements GLEventListener {
     private ByteBuffer viewBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE),
             projBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
     private FloatBuffer clearColor = GLBuffers.newDirectFloatBuffer(4), clearDepth = GLBuffers.newDirectFloatBuffer(1);
-    private int programName;
+    private int programName, currOit;
+    private OIT[] oit = new OIT[Oit.MAX];
 
     @Override
     public void init(GLAutoDrawable glad) {
-        System.out.println("init");
 
         GL3 gl3 = glad.getGL().getGL3();
 
@@ -130,13 +135,8 @@ public class Viewer implements GLEventListener {
 
         initPrograms(gl3);
 
-        depthPeeling = new DepthPeeling(gl3);
-//        dualDepthPeeling = new DualDepthPeeling(gl3, imageSize, blockBinding);
-//        weightedSum = new WeightedSum(gl3, blockBinding);
-//        weightedAverage = new WeightedAverage(gl3, blockBinding);
-//        weightedBlended = new WeightedBlended(gl3, blockBinding);
+        initOIT(gl3);
 
-//        weightedBlendedOpaque = new WeightedBlendedOpaque(gl3, blockBinding);
         gl3.glDisable(GL_CULL_FACE);
 
         clearColor.put(new float[]{1, 1, 1, 1}).rewind();
@@ -227,35 +227,48 @@ public class Viewer implements GLEventListener {
                 Semantic.Uniform.PARAMETERS);
     }
 
+    private void initOIT(GL3 gl3) {
+        
+        oit[Oit.DEPTH_PEELING] = new DepthPeeling();
+        oit[Oit.DUAL_DEPTH_PEELING] = new DualDepthPeeling();
+
+        for (int i = 0; i < Oit.MAX; i++) {
+            oit[i].init(gl3);
+        }
+
+        currOit = Oit.DUAL_DEPTH_PEELING;
+    }
+    
     @Override
     public void display(GLAutoDrawable glad) {
-//        System.out.println("display");
 
         GL3 gl3 = glad.getGL().getGL3();
 
         {
-            inputListener.update();
-
-            viewBuffer.asFloatBuffer().put(inputListener.getView().toFa_());
-
+//            inputListener.update();
+//            viewBuffer.asFloatBuffer().put(inputListener.getView().toFa_());
+            
+            Mat4 mat = glm.lookAt_(new Vec3(0, 0, 2), new Vec3(0), new Vec3(0, 1, 0));
+            viewBuffer.asFloatBuffer().put(mat.toFa_());
+//            System.out.println("view");
+//            for (int i = 0; i < 16; i++) {
+//                System.out.println(""+viewBuffer.getFloat());
+//            }
+//            viewBuffer.rewind();
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, viewBuffer);
         }
 
-        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
-        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
-        gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
+//        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
+//        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
+//        gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
+//
+//        gl3.glEnable(GL_DEPTH_TEST);
+//
+//        gl3.glUseProgram(programName);
+//        scene.renderOpaque(gl3);
+        oit[currOit].render(gl3, scene);
 
-        gl3.glEnable(GL_DEPTH_TEST);
-
-        gl3.glUseProgram(programName);
-        scene.renderOpaque(gl3);
-
-        depthPeeling.render(gl3, scene);
-//        weightedSum.render(gl3, scene);
-//        weightedAverage.render(gl3, scene);
-//        weightedBlended.render(gl3, scene);
-//        weightedBlendedOpaque.render(gl3, scene);
         checkError(gl3, "display");
     }
 
@@ -265,18 +278,21 @@ public class Viewer implements GLEventListener {
 
         GL3 gl3 = glad.getGL().getGL3();
 
-        depthPeeling.reshape(gl3, width, height);
-//        weightedSum.reshape(gl3, width, height);
-//        weightedAverage.reshape(gl3, width, height);
-//        weightedBlended.reshape(gl3, width, height);
-//
-//        weightedBlendedOpaque.reshape(gl3, width, height);
+        imageSize.set(width, height);
+
+        oit[currOit].reshape(gl3);
 
         imageSize = new Vec2i(width, height);
 
         {
-            projBuffer.asFloatBuffer().put(glm.perspective_(30f, (float) width / height, 0.001f, 10).toFa_());
-
+//            projBuffer.asFloatBuffer().put(glm.perspective_(30f, (float) width / height, 0.001f, 10).toFa_());
+            projBuffer.asFloatBuffer().put(
+                    glm.perspective_((float)Math.toRadians(30f), (float) width / height, 0.0001f, 10).toFa_());
+//            System.out.println("proj");
+//            for (int i = 0; i < 16; i++) {
+//                System.out.println(""+projBuffer.getFloat());
+//            }
+//            projBuffer.rewind();
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, Mat4.SIZE, Mat4.SIZE, projBuffer);
         }
@@ -288,7 +304,6 @@ public class Viewer implements GLEventListener {
 
     @Override
     public void dispose(GLAutoDrawable glad) {
-//        System.out.println("dispose");
 
         GL3 gl3 = glad.getGL().getGL3();
 

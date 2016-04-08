@@ -73,6 +73,13 @@ public class Semantic {
         public static final int DEPTH = 0;
         public static final int TEMP = 0;
         public static final int COLOR = 0;
+        /**
+         * Dual Depth Peeling.
+         */
+//        public static final int DEPTH = 0;
+        public static final int FRONT_BLENDER = 1;
+        public static final int BACK_TEMP = 0;
+        public static final int BACK_BLENDER = 2;
     }
 
     public static class Storage {

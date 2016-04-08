@@ -5,18 +5,12 @@
  */
 package oit.gl3.dp;
 
-import static com.jogamp.opengl.GL.GL_COLOR_ATTACHMENT0;
-import static com.jogamp.opengl.GL.GL_DEPTH_ATTACHMENT;
-import static com.jogamp.opengl.GL.GL_FLOAT;
-import static com.jogamp.opengl.GL.GL_FRAMEBUFFER;
-import static com.jogamp.opengl.GL.GL_FRAMEBUFFER_COMPLETE;
-import static com.jogamp.opengl.GL.GL_RGBA;
-import static com.jogamp.opengl.GL2ES2.GL_DEPTH_COMPONENT;
-import static com.jogamp.opengl.GL2ES2.GL_FRAGMENT_SHADER;
-import static com.jogamp.opengl.GL2ES2.GL_VERTEX_SHADER;
-import static com.jogamp.opengl.GL2ES3.GL_DEPTH_COMPONENT32F;
-import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_BASE_LEVEL;
-import static com.jogamp.opengl.GL2ES3.GL_TEXTURE_MAX_LEVEL;
+import static com.jogamp.opengl.GL.GL_CLAMP_TO_EDGE;
+import static com.jogamp.opengl.GL.GL_NEAREST;
+import static com.jogamp.opengl.GL.GL_TEXTURE_MAG_FILTER;
+import static com.jogamp.opengl.GL.GL_TEXTURE_MIN_FILTER;
+import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_S;
+import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_T;
 import static com.jogamp.opengl.GL2GL3.*;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
@@ -28,23 +22,26 @@ import java.nio.IntBuffer;
 import jglm.Jglm;
 import oit.BufferUtils;
 import oit.gl3.FullscreenQuad;
+import oit.gl3.FullscreenQuad;
 import oit.gl3.Scene;
-import oit.gl3.Semantic;
 import oit.gl3.Viewer;
+import oit.gl3.OIT;
+import oit.gl3.OIT;
+import oit.gl3.Scene;
+import oit.gl3.Viewer;
+import oit.gl3.Semantic;
 
 /**
  *
  * @author gbarbieri
  */
-public class DepthPeeling {
+public class DepthPeeling extends OIT {
 
     private static final String SHADERS_ROOT = "/oit/gl3/dp/shaders/";
     private static final String[] SHADERS_SRC = new String[]{"init", "peel", "blend", "final"};
     private FullscreenQuad fullscreenQuad;
-    public static int numGeoPasses = 0;
-    public int numPasses = 4;
-    private boolean useOQ = true;
-    private FloatBuffer clearColor = GLBuffers.newDirectFloatBuffer(4), clearDepth = GLBuffers.newDirectFloatBuffer(1);
+    private int numGeoPasses, numPasses;
+    private boolean useOQ;
 
     private class Program {
 
@@ -69,7 +66,7 @@ public class DepthPeeling {
         public final static int COLOR0 = 2;
         public final static int COLOR1 = 3;
         public final static int COLOR_BLENDER = 4;
-        public final static int MAX = 7;
+        public final static int MAX = 5;
     }
 
     private class Framebuffer {
@@ -77,7 +74,7 @@ public class DepthPeeling {
         public final static int _0 = 0;
         public final static int _1 = 1;
         public final static int COLOR_BLENDER = 2;
-        public final static int MAX = 4;
+        public final static int MAX = 3;
     }
 
     private int[] programName = new int[Program.MAX];
@@ -87,13 +84,24 @@ public class DepthPeeling {
             queryName = GLBuffers.newDirectIntBuffer(1), samplerName = GLBuffers.newDirectIntBuffer(1),
             samplesCount = GLBuffers.newDirectIntBuffer(1);
 
-    public DepthPeeling(GL3 gl3) {
+    @Override
+    public void init(GL3 gl3) {
+
+        numGeoPasses = 0;
+        numPasses = 4;
+
+        useOQ = true;
+
+        clearColor = GLBuffers.newDirectFloatBuffer(4);
+        clearDepth = GLBuffers.newDirectFloatBuffer(1);
 
         initBuffers(gl3);
 
         initPrograms(gl3);
 
         initSampler(gl3);
+
+        initTargets(gl3);
 
         gl3.glGenQueries(1, queryName);
 
@@ -199,6 +207,17 @@ public class DepthPeeling {
                 Semantic.Sampler.OPAQUE_COLOR);
     }
 
+    private void initSampler(GL3 gl3) {
+
+        gl3.glGenSamplers(1, samplerName);
+
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    @Override
     public void render(GL3 gl3, Scene scene) {
 
         numGeoPasses = 0;
@@ -206,7 +225,7 @@ public class DepthPeeling {
          * (1) Initialize Min Depth Buffer.
          */
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
-        gl3.glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        gl3.glDrawBuffer(drawBuffers.get(0));
 
         clearColor.put(new float[]{0, 0, 0, 1}).rewind();
         gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
@@ -215,16 +234,14 @@ public class DepthPeeling {
         gl3.glEnable(GL_DEPTH_TEST);
 
         gl3.glUseProgram(programName[Program.INIT]);
-
-        gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.OPAQUE_DEPTH);
-        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, Viewer.textureName.get(Viewer.Texture.DEPTH));
-        gl3.glBindSampler(Semantic.Sampler.OPAQUE_DEPTH, samplerName.get(0));
+        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH, samplerName);
 
         scene.renderTransparent(gl3);
+        numGeoPasses++;
         /**
-         * (2) Depth Peeling + Blending.
+         * (2) Depth Peeling + Blending
          *
-         * numLayers is useful if occlusion queries are disabled. In this case,
+         * numLayers is useful if occlusion queries are disabled In this case,
          * increasing/decreasing numPasses lets you see the intermediate results
          * and compare the intermediate results of front-to-back peeling vs dual
          * depth peeling for a given budget of geometry passes (numPasses).
@@ -235,7 +252,7 @@ public class DepthPeeling {
          * done earlier but for sure not further than that
          *
          * || means you will peel until you render something or you didnt reach
-         * yet the max numLayers
+         * yet the max numLayers.
          */
         for (int layer = 1; useOQ || layer < numLayers; layer++) {
 
@@ -243,7 +260,7 @@ public class DepthPeeling {
             int prevId = 1 - currId;
 
             gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer._0 + currId));
-            gl3.glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            gl3.glDrawBuffer(drawBuffers.get(0));
 
             clearColor.put(3, 0);
             gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
@@ -257,23 +274,18 @@ public class DepthPeeling {
             }
 
             gl3.glUseProgram(programName[Program.PEEL]);
-
-            gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.DEPTH);
-            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.DEPTH0 + prevId));
-            gl3.glBindSampler(Semantic.Sampler.DEPTH, samplerName.get(0));
-
-            gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.OPAQUE_DEPTH);
-            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, Viewer.textureName.get(Viewer.Texture.DEPTH));
-            gl3.glBindSampler(Semantic.Sampler.OPAQUE_DEPTH, samplerName.get(0));
+            bindTextureRect(gl3, textureName.get(Texture.DEPTH0 + prevId), Semantic.Sampler.DEPTH, samplerName);
+            bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH, samplerName);
 
             scene.renderTransparent(gl3);
+            numGeoPasses++;
 
             if (useOQ) {
                 gl3.glEndQuery(GL_SAMPLES_PASSED);
             }
 
             gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
-            gl3.glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            gl3.glDrawBuffer(drawBuffers.get(0));
 
             gl3.glDisable(GL_DEPTH_TEST);
             gl3.glEnable(GL_BLEND);
@@ -282,10 +294,7 @@ public class DepthPeeling {
             gl3.glBlendFuncSeparate(GL_DST_ALPHA, GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 
             gl3.glUseProgram(programName[Program.BLEND]);
-
-            gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.TEMP);
-            gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR0 + currId));
-            gl3.glBindSampler(Semantic.Sampler.TEMP, samplerName.get(0));
+            bindTextureRect(gl3, textureName.get(Texture.COLOR0 + currId), Semantic.Sampler.TEMP, samplerName);            
 
             fullscreenQuad.render(gl3);
 
@@ -306,25 +315,25 @@ public class DepthPeeling {
         gl3.glDisable(GL_DEPTH_TEST);
 
         gl3.glUseProgram(programName[Program.FINAL]);
-
-        gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.COLOR);
-        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR_BLENDER));
-        gl3.glBindSampler(Semantic.Sampler.COLOR, samplerName.get(0));
-
-        gl3.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.OPAQUE_COLOR);
-        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, Viewer.textureName.get(Viewer.Texture.COLOR));
-        gl3.glBindSampler(Semantic.Sampler.OPAQUE_COLOR, samplerName.get(0));
+        bindTextureRect(gl3, textureName.get(Texture.COLOR_BLENDER), Semantic.Sampler.COLOR, samplerName);
+        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR, samplerName);
 
         fullscreenQuad.render(gl3);
     }
 
-    public void reshape(GL3 gl3, int width, int height) {
+    @Override
+    public void reshape(GL3 gl3) {
 
-        deleteRenderTargets(gl3);
-        initRenderTargets(gl3);
+        deleteTargets(gl3);
+        initTargets(gl3);
     }
 
-    private void initRenderTargets(GL3 gl3) {
+    @Override
+    public void dispose(GL3 gl3) {
+
+    }
+
+    private void initTargets(GL3 gl3) {
 
         gl3.glGenTextures(Texture.MAX, textureName);
         gl3.glGenFramebuffers(Framebuffer.MAX, framebufferName);
@@ -355,7 +364,7 @@ public class DepthPeeling {
                     textureName.get(Texture.COLOR0 + i), 0);
 
             if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-                throw new Error("framebuffer " + framebufferName.get(Framebuffer._0 + i) + " incomplete!");
+                throw new Error("framebuffer (_0 + " + i + ") incomplete!");
             }
         }
 
@@ -374,23 +383,14 @@ public class DepthPeeling {
                 textureName.get(Texture.COLOR_BLENDER), 0);
 
         if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw new Error("framebuffer " + framebufferName.get(Framebuffer.COLOR_BLENDER) + " incomplete!");
+            throw new Error("framebuffer COLOR_BLENDER incomplete!");
         }
     }
 
-    private void deleteRenderTargets(GL3 gl3) {
+    private void deleteTargets(GL3 gl3) {
 
         gl3.glDeleteFramebuffers(Framebuffer.MAX, framebufferName);
         gl3.glDeleteTextures(Texture.MAX, textureName);
     }
 
-    private void initSampler(GL3 gl3) {
-
-        gl3.glGenSamplers(1, samplerName);
-
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    }
 }
