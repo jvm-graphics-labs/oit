@@ -64,7 +64,6 @@ public class Semantic {
     public static class Sampler {
 
         public static final int DIFFUSE = 0;
-        public static final int SUM_COLOR = 1;
         public static final int SUM_WEIGHT = 2;
         public static final int OPAQUE_DEPTH = 1;
         public static final int OPAQUE_COLOR = 1;
@@ -76,10 +75,14 @@ public class Semantic {
         /**
          * Dual Depth Peeling.
          */
-//        public static final int DEPTH = 0;
         public static final int FRONT_BLENDER = 1;
         public static final int BACK_TEMP = 0;
         public static final int BACK_BLENDER = 2;
+        /**
+         * Weighted Average.
+         */
+        public static final int SUM_COLOR = 0;
+        public static final int COUNT = 1;
     }
 
     public static class Storage {

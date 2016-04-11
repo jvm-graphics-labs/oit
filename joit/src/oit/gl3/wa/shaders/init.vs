@@ -9,11 +9,27 @@
 
 #version 330
 
-layout (location = 0) in vec3 position;
+#include semantic.glsl
 
-uniform mat4 modelToClip;
+layout (location = POSITION) in vec3 position;
 
-void main(void)
+out vec3 interpolated;
+
+uniform Transform0
 {
-    gl_Position = modelToClip * vec4(position, 1.0);
+    mat4 view;
+    mat4 proj;
+} t0;
+
+uniform Transform1
+{
+    mat4 model;
+} t1;
+
+vec3 shadeVertex();
+
+void main(void) {
+
+    gl_Position = t0.proj * t0.view * t1.model * vec4(position, 1.0);
+    interpolated = shadeVertex();
 }

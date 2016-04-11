@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// Order Independent Transparency Vertex Shader
+// Order Independent Transparency with Weighted Sums
 //
 // Author: Louis Bavoil
 // Email: sdkfeedback@nvidia.com
@@ -9,13 +9,14 @@
 
 #version 330
 
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
+#include semantic.glsl
 
-uniform mat4 modelToWorld;
+layout (location = FRAG_COLOR) out vec4 outputColor;
 
-vec3 ShadeVertex()
+vec4 shadeFragment();
+
+void main(void)
 {
-	float diffuse = abs(normalize(mat3(modelToWorld) * normal).z);
-	return vec3(position.xy, diffuse);
+    vec4 color = shadeFragment();
+    outputColor = vec4(color.rgb * color.a, color.a);
 }

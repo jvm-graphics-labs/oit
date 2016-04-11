@@ -21,7 +21,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import jglm.Jglm;
 import oit.BufferUtils;
-import oit.Settings;
+import oit.Resources;
 import oit.gl3.FullscreenQuad;
 import oit.gl3.FullscreenQuad;
 import oit.gl3.Scene;
@@ -346,7 +346,7 @@ public class DepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT32F, Settings.imageSize.x, Settings.imageSize.y, 0,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT32F, Resources.imageSize.x, Resources.imageSize.y, 0,
                     GL_DEPTH_COMPONENT, GL_FLOAT, null);
 
             gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR0 + i));
@@ -354,7 +354,7 @@ public class DepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0, GL_RGBA,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Resources.imageSize.x, Resources.imageSize.y, 0, GL_RGBA,
                     GL_FLOAT, null);
 
             gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer._0 + i));
@@ -363,10 +363,6 @@ public class DepthPeeling extends OIT {
                     textureName.get(Texture.DEPTH0 + i), 0);
             gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
                     textureName.get(Texture.COLOR0 + i), 0);
-
-            if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-                throw new Error("framebuffer (_0 + " + i + ") incomplete!");
-            }
         }
 
         gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR_BLENDER));
@@ -374,7 +370,7 @@ public class DepthPeeling extends OIT {
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0, GL_RGBA, GL_FLOAT,
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Resources.imageSize.x, Resources.imageSize.y, 0, GL_RGBA, GL_FLOAT,
                 null);
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
@@ -382,10 +378,6 @@ public class DepthPeeling extends OIT {
                 textureName.get(Texture.DEPTH0), 0);
         gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
                 textureName.get(Texture.COLOR_BLENDER), 0);
-
-        if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw new Error("framebuffer COLOR_BLENDER incomplete!");
-        }
     }
 
     private void deleteTargets(GL3 gl3) {

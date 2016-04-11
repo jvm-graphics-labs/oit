@@ -15,7 +15,7 @@ import glm.mat._4.Mat4;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import oit.BufferUtils;
-import oit.Settings;
+import oit.Resources;
 import oit.gl3.FullscreenQuad;
 import oit.gl3.OIT;
 import oit.gl3.Scene;
@@ -30,7 +30,6 @@ public class DualDepthPeeling extends OIT {
     private static final String SHADERS_ROOT = "/oit/gl3/ddp/shaders/";
     private static final String[] SHADERS_SRC = new String[]{"init", "peel", "blend", "final"};
     private static final float MAX_DEPTH = 1f;
-    private FullscreenQuad fullscreenQuad;
 
     private class Program {
 
@@ -89,29 +88,24 @@ public class DualDepthPeeling extends OIT {
 
         gl3.glGenQueries(1, queryName);
 
-        fullscreenQuad = new FullscreenQuad(gl3);
+        Resources.fullscreenQuad = new FullscreenQuad(gl3);
 
         clearDepth.put(new float[]{1}).rewind();
     }
 
     private void initBuffers(GL3 gl3) {
 
-        ByteBuffer buffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
-
         gl3.glGenBuffers(Buffer.MAX, bufferName);
 
-        buffer.putFloat(0, 0.6f);
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, buffer, GL_DYNAMIC_DRAW);
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, Resources.opacity, GL_DYNAMIC_DRAW);
         gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
 
-        buffer.asFloatBuffer().put(glm.ortho_(0, 1, 0, 1).toFa_());
+        Resources.matBuffer.asFloatBuffer().put(glm.ortho_(0, 1, 0, 1).toFa_());
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, buffer, GL_DYNAMIC_DRAW);
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, Resources.matBuffer, GL_DYNAMIC_DRAW);
         gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM2, bufferName.get(Buffer.TRANSFORM2));
-
-        BufferUtils.destroyDirectBuffer(buffer);
     }
 
     private void initPrograms(GL3 gl3) {
@@ -218,25 +212,23 @@ public class DualDepthPeeling extends OIT {
          * Clear to 0.0 and use MAX blending to filter written color
          * At most one front color and one back color can be written every pass.
          */
-        clearColor.put(new float[]{0,0,0,0}).rewind();
-        gl3.glClearBufferfv(GL_COLOR, 1, clearColor);
-        gl3.glClearBufferfv(GL_COLOR, 2, clearColor);
-//        drawBuffers.position(1);
-//        gl3.glDrawBuffers(2, drawBuffers);
-//        gl3.glClearColor(0, 0, 0, 0);
-//        gl3.glClear(GL_COLOR_BUFFER_BIT);
+//        clearColor.put(new float[]{0, 0.1f, 0.5f, 0.9f}).rewind();
+//        gl3.glClearBufferfv(GL_COLOR, 1, new float[]{0, 0.1f, 0.5f, 0.9f}, 0);
+//        gl3.glClearBufferfv(GL_COLOR, 2, clearColor);
+        drawBuffers.position(1);
+        gl3.glDrawBuffers(2, drawBuffers);
+        gl3.glClearColor(0, 0, 0, 0);
+        gl3.glClear(GL_COLOR_BUFFER_BIT);
 
-        gl3.glReadBuffer(GL_COLOR_ATTACHMENT1);
-        ByteBuffer buffer = GLBuffers.newDirectByteBuffer(4 * Float.BYTES);
-        gl3.glReadPixels(500, 500, 1, 1, GL_RGBA, GL_FLOAT, buffer);
-        System.out.println("pixel (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat()
-                + ", " + buffer.getFloat() + ")");
+//        gl3.glReadBuffer(GL_COLOR_ATTACHMENT1);
+//        ByteBuffer buffer = GLBuffers.newDirectByteBuffer(4 * Float.BYTES);
+//        gl3.glReadPixels(500, 500, 1, 1, GL_RGBA, GL_FLOAT, buffer);
+//        System.out.println("pixel (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat()
+//                + ", " + buffer.getFloat() + ")");
 
         /**
          * Render target 0 stores (-minDepth, maxDepth, alphaMultiplier).
          */
-//        clearColor.put(0, -MAX_DEPTH).put(1, -MAX_DEPTH);
-//        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
         gl3.glDrawBuffer(drawBuffers.get(0));
         gl3.glClearColor(-MAX_DEPTH, -MAX_DEPTH, 0, 0);
         gl3.glClear(GL_COLOR_BUFFER_BIT);
@@ -251,16 +243,13 @@ public class DualDepthPeeling extends OIT {
          * Since we cannot blend the back colors in the geometry passes,
          * we use another render target to do the alpha blending.
          */
-//        clearColor.put(0, Settings.backgroundColor.x).put(1, Settings.backgroundColor.y)
-//                .put(2, Settings.backgroundColor.z).put(3, 0);
-//        gl3.glClearBufferfv(GL_COLOR, 6, clearColor);
         gl3.glDrawBuffer(drawBuffers.get(6));
         gl3.glClearColor(1, 1, 1, 0);
         gl3.glClear(GL_COLOR_BUFFER_BIT);
 
         int currId = 0;
 
-        for (int pass = 1; Settings.useOQ || pass < Settings.numPasses; pass++) {
+        for (int pass = 1; Resources.useOQ || pass < Resources.numPasses; pass++) {
 
             currId = pass % 2;
             int prevId = 1 - currId;
@@ -298,15 +287,15 @@ public class DualDepthPeeling extends OIT {
             gl3.glBlendEquation(GL_FUNC_ADD);
             gl3.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            if (Settings.useOQ) {
+            if (Resources.useOQ) {
                 gl3.glBeginQuery(GL_SAMPLES_PASSED, queryName.get(0));
             }
 
             gl3.glUseProgram(programName[Program.BLEND]);
             bindTextureRect(gl3, textureName.get(Texture.BACK_TEMP0 + currId), Semantic.Sampler.BACK_TEMP, samplerName);
-            fullscreenQuad.render(gl3);
+            Resources.fullscreenQuad.render(gl3);
 
-            if (Settings.useOQ) {
+            if (Resources.useOQ) {
                 gl3.glEndQuery(GL_SAMPLES_PASSED);
                 gl3.glGetQueryObjectuiv(queryName.get(0), GL_QUERY_RESULT, samplesCount);
                 if (samplesCount.get(0) == 0) {
@@ -324,11 +313,10 @@ public class DualDepthPeeling extends OIT {
         gl3.glDrawBuffer(GL_BACK);
 
         gl3.glUseProgram(programName[Program.FINAL]);
-        //bindTextureRect(gl3, textureName.get(Texture.DEPTH0 + currId), Semantic.Sampler.DEPTH, samplerName);
         bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + currId), Semantic.Sampler.FRONT_BLENDER, samplerName);
         bindTextureRect(gl3, textureName.get(Texture.BACK_BLENDER), Semantic.Sampler.BACK_BLENDER, samplerName);
 
-        fullscreenQuad.render(gl3);
+        Resources.fullscreenQuad.render(gl3);
     }
 
     @Override
@@ -350,7 +338,7 @@ public class DualDepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, Settings.imageSize.x, Settings.imageSize.y, 0,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, Resources.imageSize.x, Resources.imageSize.y, 0,
                     GL_RG, GL_FLOAT, null);
 
             gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.FRONT_BLENDER0 + i));
@@ -358,7 +346,7 @@ public class DualDepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Resources.imageSize.x, Resources.imageSize.y, 0,
                     GL_RGBA, GL_FLOAT, null);
 
             gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.BACK_TEMP0 + i));
@@ -366,7 +354,7 @@ public class DualDepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Resources.imageSize.x, Resources.imageSize.y, 0,
                     GL_RGBA, GL_FLOAT, null);
         }
 
@@ -375,16 +363,12 @@ public class DualDepthPeeling extends OIT {
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB8, Settings.imageSize.x, Settings.imageSize.y, 0,
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB8, Resources.imageSize.x, Resources.imageSize.y, 0,
                 GL_RGB, GL_FLOAT, null);
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.BACK_BLENDER));
         gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
                 textureName.get(Texture.BACK_BLENDER), 0);
-
-        if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw new Error("framebuffer BACK_BLENDER incomplete!");
-        }
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.SINGLE));
         for (int i = 0; i < 2; i++) {
@@ -397,10 +381,6 @@ public class DualDepthPeeling extends OIT {
         }
         gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_RECTANGLE,
                 textureName.get(Texture.BACK_BLENDER), 0);
-
-        if (gl3.glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw new Error("framebuffer SINGLE incomplete!");
-        }
     }
 
     private void deleteTargets(GL3 gl3) {
@@ -410,7 +390,7 @@ public class DualDepthPeeling extends OIT {
     }
 
     @Override
-    public void dispose(GL3 gl3) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void dispose(GL3 gl3) {    
+        deleteTargets(gl3);
     }
 }

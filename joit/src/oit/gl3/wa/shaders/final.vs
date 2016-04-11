@@ -9,22 +9,16 @@
 
 #version 330
 
-layout (location = 0) in vec3 position;
+#include semantic.glsl
 
-smooth out vec3 interpolated;
+layout (location = POSITION) in vec2 position;
 
-uniform mat4 modelToWorld;
+uniform Transform2
+{
+    mat4 modelToClip;
+} t2;
 
-layout(std140) uniform vpMatrixes  {
-
-    mat4 worldToCamera;
-    mat4 cameraToClip;
-};
-
-vec3 ShadeVertex();
-
-void main(void) {
-
-    gl_Position = cameraToClip * worldToCamera * modelToWorld * vec4(position, 1.0);
-    interpolated = ShadeVertex();
+void main(void)
+{
+     gl_Position = t2.modelToClip * vec4(position, 0.0, 1.0);
 }

@@ -8,16 +8,19 @@
 //--------------------------------------------------------------------------------------
 
 #version 330
-#extension ARB_draw_buffers : require
 
-layout (location = 0) out vec4 accumulationTexId0;
-layout (location = 1) out vec4 accumulationTexId1;
+#extension GL_ARB_draw_buffers : require
 
-vec4 ShadeFragment();
+#include semantic.glsl
+
+layout (location = SUM_COLORS) out vec4 accumulationTex0;
+layout (location = COUNT) out float accumulationTex1;
+
+vec4 shadeFragment();
 
 void main(void)
 {
-    vec4 color = ShadeFragment();
-    accumulationTexId0 = vec4(color.rgb * color.a, color.a);
-    accumulationTexId1 = vec4(1.0);
+    vec4 color = shadeFragment();
+    accumulationTex0 = vec4(color.rgb * color.a, color.a);
+    accumulationTex1 = 1;
 }

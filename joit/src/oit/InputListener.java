@@ -76,8 +76,8 @@ public class InputListener implements KeyListener, MouseListener {
         diff.set(e.getX(), e.getY()).sub(start);
         start.set(e.getX(), e.getY());
 
-        float relX = diff.x / (float) Settings.imageSize.x;
-        float relY = diff.y / (float) Settings.imageSize.y;
+        float relX = diff.x / (float) Resources.imageSize.x;
+        float relY = diff.y / (float) Resources.imageSize.y;
 
         if (rotating) {
             rot.y += relX * 180;
@@ -102,25 +102,24 @@ public class InputListener implements KeyListener, MouseListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
+        
         switch (e.getKeyCode()) {
+            
             case KeyEvent.VK_Q:
-                Settings.useOQ = !Settings.useOQ;
+                Resources.useOQ = !Resources.useOQ;
                 break;
             case KeyEvent.VK_PLUS:
-                Settings.numPasses++;
+                Resources.numPasses++;
                 break;
             case KeyEvent.VK_MINUS:
-                Settings.numPasses--;
+                Resources.numPasses--;
                 break;
             case KeyEvent.VK_B:
-                Settings.backgroundColor = (Settings.backgroundColor.equal(Settings.white).all())
-                        ? Settings.black : Settings.white;
+                Resources.backgroundColor = (Resources.backgroundColor.equal(Resources.white).all())
+                        ? Resources.black : Resources.white;
                 break;
             case KeyEvent.VK_O:
 //                Viewer.showOsd = !Viewer.showOsd;
-                break;
-            case KeyEvent.VK_R:
-//                ReloadShaders(gl2);
                 break;
             case KeyEvent.VK_1:
 //                oit = Viewer.Oit.DUAL_DEPTH_PEELING;
@@ -143,7 +142,7 @@ public class InputListener implements KeyListener, MouseListener {
 //                opacity[0] = (float) Math.min(opacity[0], 1.0);
                 break;
             case KeyEvent.VK_ESCAPE:
-                Settings.animator.stop();
+                Resources.animator.stop();
                 break;
         }
     }

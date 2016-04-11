@@ -12,12 +12,15 @@
 #define COLOR_FREQ 30.0
 #define ALPHA_FREQ 30.0
 
-smooth in vec3 interpolated;
+in vec3 interpolated;
 
-uniform float alpha;
+uniform Parameters
+{
+    float alpha;
+} param;
 
 #if 1
-vec4 ShadeFragment()
+vec4 shadeFragment()
 {
     float xWorldPos = interpolated.x;
     float yWorldPos = interpolated.y;
@@ -28,7 +31,7 @@ vec4 ShadeFragment()
     float j = floor(yWorldPos * ALPHA_FREQ);
     color.rgb = (mod(i, 2.0) == 0) ? vec3(.4,.85,.0) : vec3(1.0);
     //color.a = (mod(j, 2.0) == 0) ? alpha : 0.2;
-    color.a = alpha;
+    color.a = param.alpha;
 
     color.rgb *= diffuse;
     return color;
@@ -38,7 +41,7 @@ vec4 shadeFragment()
 {
     vec4 color;
     color.rgb = vec3(.4,.85,.0);
-    color.a = alpha;
+    color.a = param.alpha;
     return color;
 }
 #endif
