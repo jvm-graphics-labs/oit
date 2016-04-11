@@ -13,7 +13,11 @@ package demos.dualDepthPeeling;
 //
 // Copyright (c) NVIDIA Corporation. All rights reserved.
 ////////////////////////////////////////////////////////////////////////////////
+import static com.jogamp.opengl.GL.*;
 import com.jogamp.opengl.GL2;
+import static com.jogamp.opengl.GLES2.*;
+import static com.jogamp.opengl.fixedfunc.GLPointerFunc.GL_NORMAL_ARRAY;
+import com.jogamp.opengl.util.GLBuffers;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,41 +28,42 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Vector;
 
 public final class Model {
 
-    private ArrayList<Float> positions_ = new ArrayList<>();
-    private ArrayList<Float> normals_ = new ArrayList<>();
-    private int posSize_;
+    private ArrayList<Float> positions = new ArrayList<>();
+    private ArrayList<Float> normals = new ArrayList<>();
+    private int posSize;
 
-    Vector<Integer> pIndex_ = new Vector<Integer>();
-    Vector<Integer> nIndex_ = new Vector<Integer>();
+    private ArrayList<Integer> pIndex = new ArrayList<>();
+    private ArrayList<Integer> nIndex = new ArrayList<>();
 
     //data structures optimized for rendering, compiled model
-    IntBuffer indices_ = null;
-    FloatBuffer vertices_ = null;
-    int pOffset_;
-    int nOffset_;
-    int vtxSize_ = 0;
+    private IntBuffer indices = null;
+    private FloatBuffer vertices = null;
+    private int pOffset;
+    private int nOffset;
+    private int vtxSize = 0;
 
-    int openEdges_;
+    private class Buffer {
 
-    private int[] g_vboId = new int[1];
-    private int[] g_eboId = new int[1];
+        public static final int VERTEX = 0;
+        public static final int ELEMENT = 1;
+        public static final int MAX = 2;
+    }
+
+    private IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX), vertexArrayName = GLBuffers.newDirectIntBuffer(1);
     public static float scale;
     public static float[] trans;
 
     public Model(GL2 gl2, String filename) {
 
-        posSize_ = 0;
-        pOffset_ = -1;
-        nOffset_ = -1;
-        vtxSize_ = 0;
-        openEdges_ = 0;
+        posSize = 0;
+        pOffset = -1;
+        nOffset = -1;
+        vtxSize = 0;
 
         System.err.println("loading OBJ...\n");
-
         loadModelFromFile(filename);
 
         System.err.println("compiling mesh...\n");
@@ -66,19 +71,10 @@ public final class Model {
 
         System.err.println(getPositionCount() + " vertices");
         System.err.println((getIndexCount() / 3) + " triangles");
-        int totalVertexSize = getCompiledVertexCount() * Float.BYTES;
-        int totalIndexSize = getCompiledIndexCount() * Integer.BYTES;
 
-        gl2.glGenBuffers(1, g_vboId, 0);
-        gl2.glBindBuffer(GL2.GL_ARRAY_BUFFER, g_vboId[0]);
-        gl2.glBufferData(GL2.GL_ARRAY_BUFFER, totalVertexSize, getCompiledVertices(), GL2.GL_STATIC_DRAW);
-        gl2.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
+        initBuffers(gl2);
 
-        gl2.glGenBuffers(1, g_eboId, 0);
-        gl2.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, g_eboId[0]);
-        gl2.glBufferData(GL2.GL_ELEMENT_ARRAY_BUFFER, totalIndexSize, getCompiledIndices(), GL2.GL_STATIC_DRAW);
-        gl2.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, 0);
-
+//        initVertexArray(gl2);
         float[] modelMin = new float[3];
         float[] modelMax = new float[3];
         computeBoundingBox(modelMin, modelMax);
@@ -87,30 +83,83 @@ public final class Model {
             modelMax[1] - modelMin[1],
             modelMax[2] - modelMin[2]};
         scale = (float) (1.0 / Math.sqrt(diag[0] * diag[0] + diag[1] * diag[1] + diag[2] * diag[2]) * 1.5);
-        trans = new float[]{(float) (-scale * (modelMin[0] + 0.5 * diag[0])), (float) (-scale * (modelMin[1] + 0.5 * diag[1])), 
+        trans = new float[]{(float) (-scale * (modelMin[0] + 0.5 * diag[0])), (float) (-scale * (modelMin[1] + 0.5 * diag[1])),
             (float) (-scale * (modelMin[2] + 0.5 * diag[2]))};
         Viewer.scale = scale;
         Viewer.trans = trans;
     }
 
-    public void render(GL2 gl) {
+    private void initBuffers(GL2 gl2) {
 
-        gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, g_vboId[0]);
-        gl.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, g_eboId[0]);
+        int totalVertexSize = getCompiledVertexCount() * Float.BYTES;
+        int totalIndexSize = getCompiledIndexCount() * Integer.BYTES;
+
+        gl2.glGenBuffers(Buffer.MAX, bufferName);
+
+        gl2.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
+        gl2.glBufferData(GL_ARRAY_BUFFER, totalVertexSize, getCompiledVertices(), GL_STATIC_DRAW);
+        gl2.glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        gl2.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+        gl2.glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalIndexSize, getCompiledIndices(), GL_STATIC_DRAW);
+        gl2.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    private void initVertexArray(GL2 gl2) {
+
         int stride = getCompiledVertexSize() * Float.BYTES;
         int normalOffset = getCompiledNormalOffset() * Float.BYTES;
-        gl.glVertexPointer(getPositionSize(), GL2.GL_FLOAT, stride, 0);
-        gl.glNormalPointer(GL2.GL_FLOAT, stride, normalOffset);
-        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
-        gl.glEnableClientState(GL2.GL_NORMAL_ARRAY);
 
-        gl.glDrawElements(GL2.GL_TRIANGLES, getCompiledIndexCount(), GL2.GL_UNSIGNED_INT, 0);
+        gl2.glGenVertexArrays(1, vertexArrayName);
 
-        gl.glBindBuffer(GL2.GL_ELEMENT_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
-        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
-        gl.glDisableClientState(GL2.GL_NORMAL_ARRAY);
+        gl2.glBindVertexArray(vertexArrayName.get(0));
 
+        gl2.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
+
+        gl2.glVertexAttribPointer(Semantic.Attr.POSITION, 3, GL_FLOAT, false, stride, 0);
+        gl2.glVertexAttribPointer(Semantic.Attr.NORMAL, 3, GL_FLOAT, false, stride, normalOffset);
+
+        gl2.glEnableVertexAttribArray(Semantic.Attr.POSITION);
+        gl2.glEnableVertexAttribArray(Semantic.Attr.NORMAL);
+
+        gl2.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+    }
+
+    public void render(GL2 gl2) {
+
+        gl2.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
+        gl2.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+        int stride = getCompiledVertexSize() * Float.BYTES;
+        int normalOffset = getCompiledNormalOffset() * Float.BYTES;
+        gl2.glVertexPointer(getPositionSize(), GL_FLOAT, stride, 0);
+        gl2.glNormalPointer(GL_FLOAT, stride, normalOffset);
+        gl2.glEnableClientState(GL_VERTEX_ARRAY);
+        gl2.glEnableClientState(GL_NORMAL_ARRAY);
+//
+//        gl2.glVertexAttribPointer(Semantic.Attr.POSITION, 3, GL_FLOAT, false, stride, 0);
+//        gl2.glVertexAttribPointer(Semantic.Attr.NORMAL, 3, GL_FLOAT, false, stride, normalOffset);
+//
+//        gl2.glEnableVertexAttribArray(Semantic.Attr.POSITION);
+//        gl2.glEnableVertexAttribArray(Semantic.Attr.NORMAL);
+//        
+//        gl2.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+//        
+//        gl.glBindVertexArray(vertexArrayName.get(0));
+
+        gl2.glDrawElements(GL_TRIANGLES, getCompiledIndexCount(), GL_UNSIGNED_INT, 0);
+        
+//        gl2.glDisableVertexAttribArray(Semantic.Attr.POSITION);
+//        gl2.glDisableVertexAttribArray(Semantic.Attr.NORMAL);
+//        
+//        gl2.glBindBuffer(GL_ARRAY_BUFFER, 0);
+//        gl2.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+//        gl.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+//        gl.glBindBuffer(GL_ARRAY_BUFFER, 0);
+//        gl.glDisableClientState(GL_VERTEX_ARRAY);
+//        gl.glDisableClientState(GL_NORMAL_ARRAY);
+//
+//        gl.glBindVertexArray(0);
         Viewer.g_numGeoPasses++;
     }
 
@@ -170,9 +219,9 @@ public final class Model {
                                     val[1] = Float.valueOf(line.substring(0, line.indexOf(" ")));
                                     line = line.substring(line.indexOf(" ") + 1);
                                     val[2] = Float.valueOf(line);
-                                    positions_.add(val[0]);
-                                    positions_.add(val[1]);
-                                    positions_.add(val[2]);
+                                    positions.add(val[0]);
+                                    positions.add(val[1]);
+                                    positions.add(val[2]);
                                     break;
 
                                 case 'n':
@@ -183,9 +232,9 @@ public final class Model {
                                     val[1] = Float.valueOf(line.substring(0, line.indexOf(" ")));
                                     line = line.substring(line.indexOf(" ") + 1);
                                     val[2] = Float.valueOf(line);
-                                    normals_.add(val[0]);
-                                    normals_.add(val[1]);
-                                    normals_.add(val[2]);
+                                    normals.add(val[0]);
+                                    normals.add(val[1]);
+                                    normals.add(val[2]);
                                     break;
                             }
                             break;
@@ -203,8 +252,8 @@ public final class Model {
 
                                 // in .obj, f v1 .... the vertex index used start from 1, so -1 here
                                 //remap them to the right spot
-                                idx[0][0] = (idx[0][0] > 0) ? (idx[0][0] - 1) : ((int) positions_.size() - idx[0][0]);
-                                idx[0][1] = (idx[0][1] > 0) ? (idx[0][1] - 1) : ((int) normals_.size() - idx[0][1]);
+                                idx[0][0] = (idx[0][0] > 0) ? (idx[0][0] - 1) : ((int) positions.size() - idx[0][0]);
+                                idx[0][1] = (idx[0][1] > 0) ? (idx[0][1] - 1) : ((int) normals.size() - idx[0][1]);
 
                                 //grab the second vertex to prime
                                 line = line.substring(line.indexOf(" ") + 1);
@@ -213,8 +262,8 @@ public final class Model {
                                 idx[1][1] = Integer.valueOf(line.substring(0, line.indexOf(" ")));
 
                                 //remap them to the right spot
-                                idx[1][0] = (idx[1][0] > 0) ? (idx[1][0] - 1) : ((int) positions_.size() - idx[1][0]);
-                                idx[1][1] = (idx[1][1] > 0) ? (idx[1][1] - 1) : ((int) normals_.size() - idx[1][1]);
+                                idx[1][0] = (idx[1][0] > 0) ? (idx[1][0] - 1) : ((int) positions.size() - idx[1][0]);
+                                idx[1][1] = (idx[1][1] > 0) ? (idx[1][1] - 1) : ((int) normals.size() - idx[1][1]);
 
                                 //grab the third vertex to prime
                                 line = line.substring(line.indexOf(" ") + 1);
@@ -223,13 +272,13 @@ public final class Model {
                                 idx[2][1] = Integer.valueOf(line);
                                 {
                                     //remap them to the right spot
-                                    idx[2][0] = (idx[2][0] > 0) ? (idx[2][0] - 1) : ((int) positions_.size() - idx[2][0]);
-                                    idx[2][1] = (idx[2][1] > 0) ? (idx[2][1] - 1) : ((int) normals_.size() - idx[2][1]);
+                                    idx[2][0] = (idx[2][0] > 0) ? (idx[2][0] - 1) : ((int) positions.size() - idx[2][0]);
+                                    idx[2][1] = (idx[2][1] > 0) ? (idx[2][1] - 1) : ((int) normals.size() - idx[2][1]);
 
                                     //add the indices
                                     for (int ii = 0; ii < 3; ii++) {
-                                        pIndex_.add(idx[ii][0]);
-                                        nIndex_.add(idx[ii][1]);
+                                        pIndex.add(idx[ii][0]);
+                                        nIndex.add(idx[ii][1]);
                                     }
 
                                     //prepare for the next iteration, the num 0 does not change.
@@ -247,11 +296,11 @@ public final class Model {
                 //post-process data
                 //free anything that ended up being unused
                 if (!hasNormals) {
-                    normals_.clear();
-                    nIndex_.clear();
+                    normals.clear();
+                    nIndex.clear();
                 }
 
-                posSize_ = 3;
+                posSize = 3;
                 return true;
 
             } catch (FileNotFoundException kFNF) {
@@ -286,54 +335,54 @@ public final class Model {
         boolean needsTriangles = true;
 
         HashMap<IdxSet, Integer> pts = new HashMap<IdxSet, Integer>();
-        vertices_ = FloatBuffer.allocate((pIndex_.size() + nIndex_.size()) * 3);
-        indices_ = IntBuffer.allocate(pIndex_.size());
-        for (int i = 0; i < pIndex_.size(); i++) {
+        vertices = FloatBuffer.allocate((pIndex.size() + nIndex.size()) * 3);
+        indices = IntBuffer.allocate(pIndex.size());
+        for (int i = 0; i < pIndex.size(); i++) {
             IdxSet idx = new IdxSet();
-            idx.pIndex = pIndex_.elementAt(i);
+            idx.pIndex = pIndex.get(i);
 
-            if (normals_.size() > 0) {
-                idx.nIndex = nIndex_.elementAt(i);
+            if (normals.size() > 0) {
+                idx.nIndex = nIndex.get(i);
             } else {
                 idx.nIndex = 0;
             }
 
             if (!pts.containsKey(idx)) {
                 if (needsTriangles) {
-                    indices_.put(pts.size());
+                    indices.put(pts.size());
                 }
 
                 pts.put(idx, pts.size());
 
                 //position, 
-                vertices_.put(positions_.get(idx.pIndex * posSize_));
-                vertices_.put(positions_.get(idx.pIndex * posSize_ + 1));
-                vertices_.put(positions_.get(idx.pIndex * posSize_ + 2));
+                vertices.put(positions.get(idx.pIndex * posSize));
+                vertices.put(positions.get(idx.pIndex * posSize + 1));
+                vertices.put(positions.get(idx.pIndex * posSize + 2));
 
                 //normal
-                if (normals_.size() > 0) {
-                    vertices_.put(normals_.get(idx.nIndex * 3));
-                    vertices_.put(normals_.get(idx.nIndex * 3 + 1));
-                    vertices_.put(normals_.get(idx.nIndex * 3 + 2));
+                if (normals.size() > 0) {
+                    vertices.put(normals.get(idx.nIndex * 3));
+                    vertices.put(normals.get(idx.nIndex * 3 + 1));
+                    vertices.put(normals.get(idx.nIndex * 3 + 2));
                 }
 
             } else if (needsTriangles) {
-                indices_.put(pts.get(idx));
+                indices.put(pts.get(idx));
             }
         }
 
         //create selected prim
         //set the offsets and vertex size
-        pOffset_ = 0; //always first
-        vtxSize_ = posSize_;
+        pOffset = 0; //always first
+        vtxSize = posSize;
         if (hasNormals()) {
-            nOffset_ = vtxSize_;
-            vtxSize_ += 3;
+            nOffset = vtxSize;
+            vtxSize += 3;
         } else {
-            nOffset_ = -1;
+            nOffset = -1;
         }
-        vertices_.rewind();
-        indices_.rewind();
+        vertices.rewind();
+        indices.rewind();
     }
 
     //
@@ -344,7 +393,7 @@ public final class Model {
     //
     //////////////////////////////////////////////////////////////
     public void computeBoundingBox(float[] minVal, float[] maxVal) {
-        if (positions_.isEmpty()) {
+        if (positions.isEmpty()) {
             return;
         }
 
@@ -353,10 +402,10 @@ public final class Model {
             maxVal[i] = -1e10f;
         }
 
-        for (int i = 0; i < positions_.size(); i += 3) {
-            float x = positions_.get(i);
-            float y = positions_.get(i + 1);
-            float z = positions_.get(i + 2);
+        for (int i = 0; i < positions.size(); i += 3) {
+            float x = positions.get(i);
+            float y = positions.get(i + 1);
+            float z = positions.get(i + 2);
             minVal[0] = Math.min(minVal[0], x);
             minVal[1] = Math.min(minVal[1], y);
             minVal[2] = Math.min(minVal[2], z);
@@ -367,16 +416,16 @@ public final class Model {
     }
 
     public void clearNormals() {
-        normals_.clear();
-        nIndex_.clear();
+        normals.clear();
+        nIndex.clear();
     }
 
     public boolean hasNormals() {
-        return normals_.size() > 0;
+        return normals.size() > 0;
     }
 
     public int getPositionSize() {
-        return posSize_;
+        return posSize;
     }
 
     public int getNormalSize() {
@@ -384,62 +433,58 @@ public final class Model {
     }
 
     public ArrayList<Float> getPositions() {
-        return (positions_.size() > 0) ? positions_ : null;
+        return (positions.size() > 0) ? positions : null;
     }
 
     public ArrayList<Float> getNormals() {
-        return (normals_.size() > 0) ? normals_ : null;
+        return (normals.size() > 0) ? normals : null;
     }
 
-    public Vector<Integer> getPositionIndices() {
-        return (pIndex_.size() > 0) ? pIndex_ : null;
+    public ArrayList<Integer> getPositionIndices() {
+        return (pIndex.size() > 0) ? pIndex : null;
     }
 
-    public Vector<Integer> getNormalIndices() {
-        return (nIndex_.size() > 0) ? nIndex_ : null;
+    public ArrayList<Integer> getNormalIndices() {
+        return (nIndex.size() > 0) ? nIndex : null;
     }
 
     public int getPositionCount() {
-        return (posSize_ > 0) ? positions_.size() / posSize_ : 0;
+        return (posSize > 0) ? positions.size() / posSize : 0;
     }
 
     public int getNormalCount() {
-        return normals_.size() / 3;
+        return normals.size() / 3;
     }
 
     public int getIndexCount() {
-        return pIndex_.size();
+        return pIndex.size();
     }
 
     public FloatBuffer getCompiledVertices() {
-        return vertices_;
+        return vertices;
     }
 
     public IntBuffer getCompiledIndices() {
-        return indices_;
+        return indices;
     }
 
     public int getCompiledPositionOffset() {
-        return pOffset_;
+        return pOffset;
     }
 
     public int getCompiledNormalOffset() {
-        return nOffset_;
+        return nOffset;
     }
 
     public int getCompiledVertexSize() {
-        return vtxSize_;
+        return vtxSize;
     }
 
     public int getCompiledVertexCount() {
-        return ((pIndex_.size() + nIndex_.size()) * 3);
+        return ((pIndex.size() + nIndex.size()) * 3);
     }
 
     public int getCompiledIndexCount() {
-        return pIndex_.size();
-    }
-
-    public int getOpenEdgeCount() {
-        return openEdges_;
+        return pIndex.size();
     }
 };

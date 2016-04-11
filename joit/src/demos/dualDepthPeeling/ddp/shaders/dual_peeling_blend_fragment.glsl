@@ -11,7 +11,8 @@ uniform samplerRECT TempTex;
 
 void main(void)
 {
-	gl_FragColor = textureRect(TempTex, gl_FragCoord.xy);
-	// for occlusion query
-	if (gl_FragColor.a == 0) discard;
+    gl_FragColor = textureRect(TempTex, gl_FragCoord.xy);
+    // for occlusion query
+    if (gl_FragColor.a == 0) 
+        discard;
 }

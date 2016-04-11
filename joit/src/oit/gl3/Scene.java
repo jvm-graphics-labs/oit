@@ -13,6 +13,7 @@ import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import oit.InputListener;
 
 /**
  *
@@ -134,10 +135,10 @@ public class Scene {
 
 //                modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
                 Mat4 mat = new Mat4()
-//                        .rotate((float) Math.toRadians(0f), 1, 0, 0)
-//                        .rotate((float) Math.toRadians(45f), 0, 1, 0)
-//                        .translate(0.03f, -0.70f, 0.03f)
-//                        .scale(6f)
+//                        .rotate((float) Math.toRadians(InputListener.rot.x), 1, 0, 0)
+//                        .rotate((float) Math.toRadians(InputListener.rot.y), 0, 1, 0)
+//                        .translate(Model.trans[0], Model.trans[1], Model.trans[2])
+//                        .scale(Model.scale)
                         ;
                 modelBuffer.asFloatBuffer().put(mat.toFa_());
 //                System.out.println("model");
@@ -147,10 +148,10 @@ public class Scene {
 //                modelBuffer.rewind();
                 gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
                 gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
-
-                alphaBuffer.asFloatBuffer().put(opacities[i]);
-                gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(0));
-                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
+// TODO diff ddp-dp
+//                alphaBuffer.asFloatBuffer().put(opacities[i]);
+//                gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(Viewer.Buffer.));
+//                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
 
                 model.render(gl3);
             }

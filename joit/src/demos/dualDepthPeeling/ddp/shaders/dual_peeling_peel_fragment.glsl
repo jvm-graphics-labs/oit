@@ -7,17 +7,17 @@
 // Copyright (c) NVIDIA Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
-#extension ARB_draw_buffers : require
+#extension GL_ARB_draw_buffers : require
 
 uniform samplerRECT DepthBlenderTex;
 uniform samplerRECT FrontBlenderTex;
 
 #define MAX_DEPTH 1.0
 
-vec4 ShadeFragment();
+vec4 shadeFragment();
 
 void main(void)
-{
+{//gl_FragData[0]=vec4(0.1,0.5,0,1);discard;
 	// window-space depth interpolated linearly in screen space
 	float fragDepth = gl_FragCoord.z;
 
@@ -27,7 +27,7 @@ void main(void)
 	// Depths and 1.0-alphaMult always increase
 	// so we can use pass-through by default with MAX blending
 	gl_FragData[0].xy = depthBlender;
-	
+
 	// Front colors always increase (DST += SRC*ALPHA_MULT)
 	// so we can use pass-through by default with MAX blending
 	gl_FragData[1] = forwardTemp;
@@ -40,7 +40,7 @@ void main(void)
 	float nearestDepth = -depthBlender.x;
 	float farthestDepth = depthBlender.y;
 	float alphaMultiplier = 1.0 - forwardTemp.w;
-
+        
 	if (fragDepth < nearestDepth || fragDepth > farthestDepth) {
 		// Skip this depth in the peeling algorithm
 		gl_FragData[0].xy = vec2(-MAX_DEPTH);
@@ -55,9 +55,9 @@ void main(void)
 
 	// If we made it here, this fragment is on the peeled layer from last pass
 	// therefore, we need to shade it, and make sure it is not peeled any farther
-	vec4 color = ShadeFragment();
+	vec4 color = shadeFragment();
 	gl_FragData[0].xy = vec2(-MAX_DEPTH);
-	
+
 	if (fragDepth == nearestDepth) {
 		gl_FragData[1].xyz += color.rgb * color.a * alphaMultiplier;
 		gl_FragData[1].w = 1.0 - alphaMultiplier * (1.0 - color.a);

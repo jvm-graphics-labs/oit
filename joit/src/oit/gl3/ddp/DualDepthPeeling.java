@@ -10,17 +10,16 @@ import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
-import glm.vec._4.Vec4;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import jglm.Jglm;
 import oit.BufferUtils;
+import oit.Settings;
 import oit.gl3.FullscreenQuad;
 import oit.gl3.OIT;
 import oit.gl3.Scene;
 import oit.gl3.Semantic;
-import oit.gl3.Viewer;
 
 /**
  *
@@ -106,28 +105,36 @@ public class DualDepthPeeling extends OIT {
 
     private void initBuffers(GL3 gl3) {
 
+        ByteBuffer buffer = GLBuffers.newDirectByteBuffer(glm.mat._4.Mat4.SIZE);
+
         gl3.glGenBuffers(Buffer.MAX, bufferName);
 
+        buffer.putFloat(0, 0.6f);
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, null, GL_DYNAMIC_DRAW);
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, buffer, GL_DYNAMIC_DRAW);
         gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
 
-        ByteBuffer modelToClip = GLBuffers.newDirectByteBuffer(glm.mat._4.Mat4.SIZE);
-        modelToClip.asFloatBuffer().put(Jglm.orthographic2D(0, 1, 0, 1).toFloatArray());
+        buffer.asFloatBuffer().put(Jglm.orthographic2D(0, 1, 0, 1).toFloatArray());
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, glm.mat._4.Mat4.SIZE, modelToClip, GL_DYNAMIC_DRAW);
+        gl3.glBufferData(GL_UNIFORM_BUFFER, glm.mat._4.Mat4.SIZE, buffer, GL_DYNAMIC_DRAW);
         gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM2, bufferName.get(Buffer.TRANSFORM2));
 
-        BufferUtils.destroyDirectBuffer(modelToClip);
+        BufferUtils.destroyDirectBuffer(buffer);
     }
 
     private void initPrograms(GL3 gl3) {
-        {
-            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.INIT], "vs", null, true);
-            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.INIT], "fs", null, true);
+
+        for (int program = Program.INIT; program <= Program.PEEL; program++) {
+
+            ShaderCode vertShader = (program == Program.INIT) ? ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(),
+                    SHADERS_ROOT, null, SHADERS_SRC[program], "vs", null, true)
+                    : ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
+                            new String[]{SHADERS_SRC[Program.PEEL], "shade"}, "vs", null, null, null, true);;
+            ShaderCode fragShader = (program == Program.INIT) ? ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(),
+                    SHADERS_ROOT, null, SHADERS_SRC[program], "fs", null, true)
+                    : ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
+                            new String[]{SHADERS_SRC[Program.PEEL], "shade"}, "fs", null, null, null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -135,65 +142,37 @@ public class DualDepthPeeling extends OIT {
 
             shaderProgram.link(gl3, System.out);
 
-            programName[Program.INIT] = shaderProgram.program();
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform0"));
+            programName[program] = shaderProgram.program();
+
             gl3.glUniformBlockBinding(
-                    programName[Program.INIT],
-                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform0"),
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Transform0"),
                     Semantic.Uniform.TRANSFORM0);
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform1"));
+
             gl3.glUniformBlockBinding(
-                    programName[Program.INIT],
-                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform1"),
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Transform1"),
                     Semantic.Uniform.TRANSFORM1);
         }
+        gl3.glUniformBlockBinding(
+                programName[Program.PEEL],
+                gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Parameters"),
+                Semantic.Uniform.PARAMETERS);
 
-        {
-            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.PEEL], "shade"}, "vs", null, null, null, true);
-            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.PEEL], "shade"}, "fs", null, null, null, true);
+        gl3.glUseProgram(programName[Program.PEEL]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.PEEL], "depthBlenderTex"),
+                Semantic.Sampler.DEPTH);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.PEEL], "frontBlenderTex"),
+                Semantic.Sampler.FRONT_BLENDER);
 
-            ShaderProgram shaderProgram = new ShaderProgram();
-            shaderProgram.add(vertShader);
-            shaderProgram.add(fragShader);
+        for (int program = Program.BLEND; program <= Program.FINAL; program++) {
 
-            shaderProgram.link(gl3, System.out);
-
-            programName[Program.PEEL] = shaderProgram.program();
-
-            gl3.glUniformBlockBinding(
-                    programName[Program.PEEL],
-                    gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Transform0"),
-                    Semantic.Uniform.TRANSFORM0);
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Transform0"));
-            gl3.glUniformBlockBinding(
-                    programName[Program.PEEL],
-                    gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Transform1"),
-                    Semantic.Uniform.TRANSFORM1);
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Transform1"));
-            gl3.glUniformBlockBinding(
-                    programName[Program.PEEL],
-                    gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Parameters"),
-                    Semantic.Uniform.PARAMETERS);
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Parameters"));
-
-            gl3.glUseProgram(programName[Program.PEEL]);
-            gl3.glUniform1i(
-                    gl3.glGetUniformLocation(programName[Program.PEEL], "depthBlenderTex"),
-                    Semantic.Sampler.DEPTH);
-//            System.out.println(""+gl3.glGetUniformLocation(programName[Program.PEEL], "depthBlenderTex"));
-            gl3.glUniform1i(
-                    gl3.glGetUniformLocation(programName[Program.PEEL], "frontBlenderTex"),
-                    Semantic.Sampler.FRONT_BLENDER);
-//            System.out.println(""+gl3.glGetUniformLocation(programName[Program.PEEL], "frontBlenderTex"));
-        }
-
-        {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.BLEND], "vs", null, true);
+                    SHADERS_SRC[program], "vs", null, true);
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.BLEND], "fs", null, true);
+                    SHADERS_SRC[program], "fs", null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -201,49 +180,25 @@ public class DualDepthPeeling extends OIT {
 
             shaderProgram.link(gl3, System.out);
 
-            programName[Program.BLEND] = shaderProgram.program();
+            programName[program] = shaderProgram.program();
 
             gl3.glUniformBlockBinding(
-                    programName[Program.BLEND],
-                    gl3.glGetUniformBlockIndex(programName[Program.BLEND], "Transform2"),
+                    programName[program],
+                    gl3.glGetUniformBlockIndex(programName[program], "Transform2"),
                     Semantic.Uniform.TRANSFORM2);
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.BLEND], "Transform2"));
-            gl3.glUseProgram(programName[Program.BLEND]);
-            gl3.glUniform1i(
-                    gl3.glGetUniformLocation(programName[Program.BLEND], "tempTex"),
-                    Semantic.Sampler.BACK_TEMP);
-//            System.out.println(""+gl3.glGetUniformLocation(programName[Program.BLEND], "tempTex"));
         }
+        gl3.glUseProgram(programName[Program.BLEND]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.BLEND], "tempTex"),
+                Semantic.Sampler.BACK_TEMP);
 
-        {
-            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "vs", null, true);
-            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "fs", null, true);
-
-            ShaderProgram shaderProgram = new ShaderProgram();
-            shaderProgram.add(vertShader);
-            shaderProgram.add(fragShader);
-
-            shaderProgram.link(gl3, System.out);
-
-            programName[Program.FINAL] = shaderProgram.program();
-
-            gl3.glUniformBlockBinding(
-                    programName[Program.FINAL],
-                    gl3.glGetUniformBlockIndex(programName[Program.FINAL], "Transform2"),
-                    Semantic.Uniform.TRANSFORM2);
-//            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.FINAL], "Transform2"));
-            gl3.glUseProgram(programName[Program.FINAL]);
-            gl3.glUniform1i(
-                    gl3.glGetUniformLocation(programName[Program.FINAL], "frontBlenderTex"),
-                    Semantic.Sampler.FRONT_BLENDER);
-//            System.out.println(""+gl3.glGetUniformLocation(programName[Program.FINAL], "frontBlenderTex"));
-            gl3.glUniform1i(
-                    gl3.glGetUniformLocation(programName[Program.FINAL], "backBlenderTex"),
-                    Semantic.Sampler.BACK_BLENDER);
-//            System.out.println(""+gl3.glGetUniformLocation(programName[Program.FINAL], "backBlenderTex"));
-        }
+        gl3.glUseProgram(programName[Program.FINAL]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.FINAL], "frontBlenderTex"),
+                Semantic.Sampler.FRONT_BLENDER);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.FINAL], "backBlenderTex"),
+                Semantic.Sampler.BACK_BLENDER);
     }
 
     private void initSampler(GL3 gl3) {
@@ -276,7 +231,7 @@ public class DualDepthPeeling extends OIT {
         gl3.glDrawBuffers(2, drawBuffers, 1);
 //        clearColor.put(new float[]{0, 0, 0, 0}).rewind();
 //        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
-        gl3.glClearColor(1, 0, 0, 0);
+        gl3.glClearColor(0, 0, 0, 0);
         gl3.glClear(GL_COLOR_BUFFER_BIT);
 
         /**
@@ -297,7 +252,7 @@ public class DualDepthPeeling extends OIT {
          * we use another render target to do the alpha blending.
          */
         gl3.glDrawBuffer(drawBuffers[6]);
-        gl3.glClearColor(0, 1, 1, 0);
+        gl3.glClearColor(1, 1, 1, 0);
         gl3.glClear(GL_COLOR_BUFFER_BIT);
 
         int currId = 0;
@@ -332,17 +287,6 @@ public class DualDepthPeeling extends OIT {
 
             scene.renderTransparent(gl3);
 
-//            ByteBuffer buffer = GLBuffers.newDirectByteBuffer(Vec4.SIZE);
-            gl3.glReadBuffer(GL_COLOR_ATTACHMENT0 + 1);
-//            gl3.glReadPixels(500, 450, 1, 1, GL_RGBA, GL_FLOAT, buffer);
-//            System.out.println("pixel (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat() + ", "
-//                    + buffer.getFloat() + ")");
-            IntBuffer buffer = GLBuffers.newDirectIntBuffer(6);
-            for (int i = 0; i < 7; i++) {
-                gl3.glGetIntegerv(GL_DRAW_BUFFER0 + i, buffer);
-                System.out.println("glbuff[" + i + "] (" + buffer.get(0) + ")");
-            }
-
             /**
              * Full screen pass to alpha-blend the back color.
              */
@@ -357,6 +301,7 @@ public class DualDepthPeeling extends OIT {
 
             gl3.glUseProgram(programName[Program.BLEND]);
             bindTextureRect(gl3, textureName.get(Texture.BACK_TEMP0 + currId), Semantic.Sampler.BACK_TEMP, samplerName);
+            fullscreenQuad.render(gl3);
 
             if (useOQ) {
                 gl3.glEndQuery(GL_SAMPLES_PASSED);
@@ -402,15 +347,15 @@ public class DualDepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, Viewer.imageSize.x, Viewer.imageSize.y, 0,
-                    GL_RGB, GL_FLOAT, null);
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, Settings.imageSize.x, Settings.imageSize.y, 0,
+                    GL_RG, GL_FLOAT, null);
 
             gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.FRONT_BLENDER0 + i));
 
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Viewer.imageSize.x, Viewer.imageSize.y, 0,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0,
                     GL_RGBA, GL_FLOAT, null);
 
             gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.BACK_TEMP0 + i));
@@ -418,7 +363,7 @@ public class DualDepthPeeling extends OIT {
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
             gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Viewer.imageSize.x, Viewer.imageSize.y, 0,
+            gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0,
                     GL_RGBA, GL_FLOAT, null);
         }
 
@@ -427,7 +372,7 @@ public class DualDepthPeeling extends OIT {
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB8, Viewer.imageSize.x, Viewer.imageSize.y, 0,
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB8, Settings.imageSize.x, Settings.imageSize.y, 0,
                 GL_RGB, GL_FLOAT, null);
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.BACK_BLENDER));

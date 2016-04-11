@@ -9,13 +9,12 @@
 
 in vec3 vertex;
 
-precision highp float;
-precision highp int;
+//in vec3 position;
 
 void main(void)
 {
-     //gl_Position = ftransform();
+     gl_Position = ftransform();
      //gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
      //gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-     gl_Position = gl_ModelViewProjectionMatrix * vec4(vertex, 1);
+    //gl_Position = gl_ModelViewProjectionMatrix * vec4(vertex, 1);
 }

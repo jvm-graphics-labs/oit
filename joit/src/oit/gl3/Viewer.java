@@ -32,6 +32,7 @@ import java.nio.IntBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oit.InputListener;
+import oit.Settings;
 import oit.gl3.ddp.DualDepthPeeling;
 import oit.gl3.wa.WeightedAverage;
 import oit.gl3.wb.WeightedBlended;
@@ -46,9 +47,6 @@ public class Viewer implements GLEventListener {
     public static final String MODEL = "/data/dragon.obj";
     public static final String SHADERS_ROOT = "/oit/gl3/shaders/";
     public static final String[] SHADERS_SRC = new String[]{"opaque", "shade"};
-    public static Vec2i imageSize = new Vec2i(1024, 768);
-    public static GLWindow glWindow;
-    public static Animator animator;
 
     public static void main(String[] args) {
 
@@ -56,25 +54,25 @@ public class Viewer implements GLEventListener {
         Screen screen = NewtFactory.createScreen(display, 0);
         GLProfile glProfile = GLProfile.get(GLProfile.GL3);
         GLCapabilities glCapabilities = new GLCapabilities(glProfile);
-        glWindow = GLWindow.create(screen, glCapabilities);
+        Settings.glWindow = GLWindow.create(screen, glCapabilities);
 
-        glWindow.setSize(imageSize.x, imageSize.y);
-        glWindow.setPosition(50, 50);
-        glWindow.setUndecorated(false);
-        glWindow.setAlwaysOnTop(false);
-        glWindow.setFullscreen(false);
-        glWindow.setPointerVisible(true);
-        glWindow.confinePointer(false);
-        glWindow.setTitle("Order Independent Transparency");
+        Settings.glWindow.setSize(Settings.imageSize.x, Settings.imageSize.y);
+        Settings.glWindow.setPosition(50, 50);
+        Settings.glWindow.setUndecorated(false);
+        Settings.glWindow.setAlwaysOnTop(false);
+        Settings.glWindow.setFullscreen(false);
+        Settings.glWindow.setPointerVisible(true);
+        Settings.glWindow.confinePointer(false);
+        Settings.glWindow.setTitle("Order Independent Transparency");
 
         Viewer viewer = new Viewer();
 
-        glWindow.addGLEventListener(viewer);
+        Settings.glWindow.addGLEventListener(viewer);
 
-        animator = new Animator(glWindow);
-        animator.start();
+        Settings.animator = new Animator(Settings.glWindow);
+        Settings.animator.start();
 
-        glWindow.setVisible(true);
+        Settings.glWindow.setVisible(true);
     }
 
     private DualDepthPeeling dualDepthPeeling;
@@ -108,8 +106,8 @@ public class Viewer implements GLEventListener {
     private InputListener inputListener;
     private Scene scene;
     private IntBuffer framebufferName = GLBuffers.newDirectIntBuffer(1);
-    private ByteBuffer viewBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE),
-            projBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
+    private Mat4 view = new Mat4(), proj = new Mat4();
+    private ByteBuffer matBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
     private FloatBuffer clearColor = GLBuffers.newDirectFloatBuffer(4), clearDepth = GLBuffers.newDirectFloatBuffer(1);
     private int programName, currOit;
     private OIT[] oit = new OIT[Oit.MAX];
@@ -125,9 +123,9 @@ public class Viewer implements GLEventListener {
             Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        inputListener = new InputListener(animator);
-        glWindow.addMouseListener(inputListener);
-        glWindow.addKeyListener(inputListener);
+        inputListener = new InputListener();
+        Settings.glWindow.addMouseListener(inputListener);
+        Settings.glWindow.addKeyListener(inputListener);
 
         initBuffers(gl3);
 
@@ -143,8 +141,8 @@ public class Viewer implements GLEventListener {
         clearDepth.put(new float[]{1}).rewind();
 
         gl3.setSwapInterval(0);
-        animator.setRunAsFastAsPossible(true);
-        animator.setUpdateFPSFrames(30, System.out);
+        Settings.animator.setRunAsFastAsPossible(true);
+        Settings.animator.setUpdateFPSFrames(30, System.out);
 
         checkError(gl3, "init");
     }
@@ -173,7 +171,7 @@ public class Viewer implements GLEventListener {
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT32F, Viewer.imageSize.x, Viewer.imageSize.y, 0,
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_DEPTH_COMPONENT32F, Settings.imageSize.x, Settings.imageSize.y, 0,
                 GL_DEPTH_COMPONENT, GL_FLOAT, null);
 
         gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.COLOR));
@@ -181,7 +179,7 @@ public class Viewer implements GLEventListener {
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
         gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
 
-        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Viewer.imageSize.x, Viewer.imageSize.y, 0, GL_RGBA,
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA8, Settings.imageSize.x, Settings.imageSize.y, 0, GL_RGBA,
                 GL_FLOAT, null);
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
@@ -228,7 +226,7 @@ public class Viewer implements GLEventListener {
     }
 
     private void initOIT(GL3 gl3) {
-        
+
         oit[Oit.DEPTH_PEELING] = new DepthPeeling();
         oit[Oit.DUAL_DEPTH_PEELING] = new DualDepthPeeling();
 
@@ -238,25 +236,22 @@ public class Viewer implements GLEventListener {
 
         currOit = Oit.DUAL_DEPTH_PEELING;
     }
-    
+
     @Override
     public void display(GLAutoDrawable glad) {
 
         GL3 gl3 = glad.getGL().getGL3();
 
         {
-//            inputListener.update();
-//            viewBuffer.asFloatBuffer().put(inputListener.getView().toFa_());
-            
-            Mat4 mat = glm.lookAt_(new Vec3(0, 0, 2), new Vec3(0), new Vec3(0, 1, 0));
-            viewBuffer.asFloatBuffer().put(mat.toFa_());
-//            System.out.println("view");
-//            for (int i = 0; i < 16; i++) {
-//                System.out.println(""+viewBuffer.getFloat());
-//            }
-//            viewBuffer.rewind();
+            glm.lookAt(InputListener.pos, new Vec3(InputListener.pos.x, InputListener.pos.y, 0), new Vec3(0, 1, 0), view)
+                    .rotate((float) Math.toRadians(InputListener.rot.x), 1, 0, 0)
+                    .rotate((float) Math.toRadians(InputListener.rot.y), 0, 1, 0)
+                    .translate(Model.trans[0], Model.trans[1], Model.trans[2])
+                    .scale(Model.scale);
+            view.toFb(matBuffer);
+
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, viewBuffer);
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, matBuffer);
         }
 
 //        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
@@ -278,23 +273,23 @@ public class Viewer implements GLEventListener {
 
         GL3 gl3 = glad.getGL().getGL3();
 
-        imageSize.set(width, height);
+        Settings.imageSize.set(width, height);
 
         oit[currOit].reshape(gl3);
 
-        imageSize = new Vec2i(width, height);
+        Settings.imageSize = new Vec2i(width, height);
 
         {
 //            projBuffer.asFloatBuffer().put(glm.perspective_(30f, (float) width / height, 0.001f, 10).toFa_());
-            projBuffer.asFloatBuffer().put(
-                    glm.perspective_((float)Math.toRadians(30f), (float) width / height, 0.0001f, 10).toFa_());
+            glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
+            proj.toFb(matBuffer);
 //            System.out.println("proj");
 //            for (int i = 0; i < 16; i++) {
 //                System.out.println(""+projBuffer.getFloat());
 //            }
 //            projBuffer.rewind();
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, Mat4.SIZE, Mat4.SIZE, projBuffer);
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, Mat4.SIZE, Mat4.SIZE, matBuffer);
         }
 
         gl3.glViewport(0, 0, width, height);

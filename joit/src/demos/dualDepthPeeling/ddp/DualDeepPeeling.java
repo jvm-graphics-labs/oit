@@ -12,6 +12,7 @@ import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import demos.dualDepthPeeling.BufferUtils;
+import demos.dualDepthPeeling.FullscreenQuad;
 import demos.dualDepthPeeling.GLSLProgramObject;
 import demos.dualDepthPeeling.Model;
 import demos.dualDepthPeeling.Semantic;
@@ -86,6 +87,7 @@ public class DualDeepPeeling {
         GL_COLOR_ATTACHMENT6};
 
     private ByteBuffer matBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
+    private FullscreenQuad fullscreenQuad;
 
     public DualDeepPeeling(GL3 gl3) {
 
@@ -98,6 +100,7 @@ public class DualDeepPeeling {
         initTargets(gl3);
 
 //        initSampler(gl3);
+//        fullscreenQuad = new FullscreenQuad(gl3);
     }
 
     private void initBuffers(GL3 gl3) {
@@ -214,6 +217,31 @@ public class DualDeepPeeling {
                     gl3.glGetUniformLocation(programName[Program.PEEL], "frontBlenderTex"),
                     Semantic.Sampler.FRONT_BLENDER);
         }
+
+        {
+            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[Program.BLEND], "vs", null, true);
+            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[Program.BLEND], "fs", null, true);
+
+            ShaderProgram shaderProgram = new ShaderProgram();
+            shaderProgram.add(vertShader);
+            shaderProgram.add(fragShader);
+
+            shaderProgram.link(gl3, System.out);
+
+            programName[Program.BLEND] = shaderProgram.program();
+
+            gl3.glUniformBlockBinding(
+                    programName[Program.BLEND],
+                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform2"),
+                    Semantic.Uniform.TRANSFORM2);
+
+            gl3.glUseProgram(programName[Program.BLEND]);
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.BLEND], "tempTex"),
+                    Semantic.Sampler.TEMP);
+        }
     }
 
     private void initTargets(GL3 gl3) {
@@ -321,12 +349,12 @@ public class DualDeepPeeling {
                     .rotate((float) Math.toRadians(Viewer.rot[1]), 0, 1, 0)
                     .translate(Viewer.trans)
                     .scale(Viewer.scale);
-//            mat.identity() 
-//                    .rotate((float) Math.toRadians(0f), 1, 0, 0)
-                    //                    .rotate((float) Math.toRadians(45f), 0, 1, 0)
-                    //                    .translate(0.03f, -0.70f, 0.03f)
-                    //                    .scale(6f)
-                    ;
+            //            mat.identity() 
+            //                    .rotate((float) Math.toRadians(0f), 1, 0, 0)
+            //                    .rotate((float) Math.toRadians(45f), 0, 1, 0)
+            //                    .translate(0.03f, -0.70f, 0.03f)
+            //                    .scale(6f)
+            ;
             mat.toFb(matBuffer);
 //            System.out.println("model");
 //            for (int j = 0; j < 16; j++) {
@@ -361,7 +389,6 @@ public class DualDeepPeeling {
 //        gl2.glUseProgram(programName[Program.INIT]);
         programObjects[Program.INIT].bind(gl2);
         model.render(gl2);
-
         // ---------------------------------------------------------------------
         // 2. Dual Depth Peeling + Blending
         // ---------------------------------------------------------------------
@@ -400,20 +427,17 @@ public class DualDeepPeeling {
             programObjects[Program.PEEL].setUniform(gl2, "Alpha", Viewer.opacity, 1);
 //            gl2.glUseProgram(programName[Program.PEEL]);
 //            gl2.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.DEPTH);
-//            gl2.glBindTexture(GL_TEXTURE_RECTANGLE, g_dualDepthTexId[prevId]);
+//            gl2.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.DEPTH0 + prevId));
 //            gl2.glActiveTexture(GL_TEXTURE0 + Semantic.Sampler.FRONT_BLENDER);
-//            gl2.glBindTexture(GL_TEXTURE_RECTANGLE, g_dualFrontBlenderTexId[prevId]);
+//            gl2.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.FRONT_BLENDER0 + prevId));
             model.render(gl2);
 
-//            ByteBuffer buffer = GLBuffers.newDirectByteBuffer(Vec4.SIZE);
-//            gl2.glReadBuffer(GL_COLOR_ATTACHMENT0 + bufId + 1);
-//            for (int x = 0; x < Viewer.imageSize.x; x++) {
-//                for (int y = 0; y < Viewer.imageSize.y; y++) {
-//                    gl2.glReadPixels(x, y, 1, 1, GL_RGBA, GL_FLOAT, buffer.rewind());
-//                    System.out.println("pixel[" + x + ", " + y + "]: (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat() + ", "
-//                            + buffer.getFloat() + ")");
-//                }
-//            }
+            ByteBuffer buffer = GLBuffers.newDirectByteBuffer(Vec4.SIZE);
+            gl2.glPixelStorei(GL_PACK_ALIGNMENT, 1);
+            gl2.glReadBuffer(GL_COLOR_ATTACHMENT0 + bufId + 2);
+            gl2.glReadPixels(500, 450, 1, 1, GL_RGBA, GL_FLOAT, buffer.rewind());
+            System.out.println("backBlender[" + 500 + ", " + 450 + "]: (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat() + ", "
+                    + buffer.getFloat() + ")");
 
             // Full screen pass to alpha-blend the back color
             gl2.glDrawBuffer(drawBuffers[6]);
@@ -428,6 +452,7 @@ public class DualDeepPeeling {
             programObjects[Program.BLEND].bind(gl2);
             programObjects[Program.BLEND].bindTextureRECT(gl2, "TempTex", textureName.get(Texture.BACK_TEMP0 + currId), 0);
             gl2.glCallList(Viewer.quadDisplayList);
+//            fullscreenQuad.render((GL3) gl2);
             programObjects[Program.BLEND].unbind(gl2);
 
             if (Viewer.useOQ) {
@@ -452,6 +477,7 @@ public class DualDeepPeeling {
         programObjects[Program.FINAL].bindTextureRECT(gl2, "FrontBlenderTex", textureName.get(Texture.FRONT_BLENDER0 + currId), 1);
         programObjects[Program.FINAL].bindTextureRECT(gl2, "BackBlenderTex", textureName.get(Texture.BACK_BLENDER), 2);
         gl2.glCallList(Viewer.quadDisplayList);
+//        fullscreenQuad.render((GL3) gl2);
         programObjects[Program.FINAL].unbind(gl2);
     }
 

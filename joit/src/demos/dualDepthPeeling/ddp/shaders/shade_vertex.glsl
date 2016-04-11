@@ -7,8 +7,8 @@
 // Copyright (c) NVIDIA Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
-vec3 ShadeVertex()
+vec3 shadeVertex()
 {
-	float diffuse = abs(normalize(gl_NormalMatrix * gl_Normal).z);
-	return vec3(gl_Vertex.xy, diffuse);
+    float diffuse = abs(normalize(gl_NormalMatrix * gl_Normal).z);
+    return vec3(gl_Vertex.xy, diffuse);
 }

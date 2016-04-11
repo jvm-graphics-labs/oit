@@ -36,7 +36,7 @@ public abstract class OIT {
         GL_COLOR_ATTACHMENT4,
         GL_COLOR_ATTACHMENT5,
         GL_COLOR_ATTACHMENT6};
-    
+
     protected FloatBuffer clearColor, clearDepth;
 
     public abstract void init(GL3 gl3);
@@ -46,9 +46,9 @@ public abstract class OIT {
     public abstract void reshape(GL3 gl3);
 
     public abstract void dispose(GL3 gl3);
-    
+
     protected void bindTextureRect(GL3 gl3, int textureName, int textureUnit, IntBuffer samplerName) {
-        
+
         gl3.glActiveTexture(GL_TEXTURE0 + textureUnit);
         gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName);
         gl3.glBindSampler(textureUnit, samplerName.get(0));

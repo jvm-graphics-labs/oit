@@ -17,18 +17,15 @@
 
 uniform sampler2DRect depthBlenderTex;
 uniform sampler2DRect frontBlenderTex;
-/*
+
 layout (location = DEPTH) out vec2 depth;
 layout (location = FRONT_BLENDER) out vec4 frontBlender;
-layout (location = BACK_BLENDER) out vec4 backBlender;*/
-layout (location = 0) out vec2 depth;
-layout (location = 1) out vec4 frontBlender;
-layout (location = 2) out vec4 backBlender;
+layout (location = BACK_BLENDER) out vec4 backBlender;
 
 vec4 shadeFragment();
 
 void main(void)
-{depth=vec2(0.1,0.5);discard;
+{
     // window-space depth interpolated linearly in screen space
     float fragDepth = gl_FragCoord.z;
 

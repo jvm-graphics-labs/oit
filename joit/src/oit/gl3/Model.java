@@ -35,10 +35,11 @@ public final class Model {
     private int nOffset_;
     private int vtxSize_;
     private int[] objects;
-    private Vec3 center;
+    public static float scale;
+    public static float[] trans;
 
     public Model(GL3 gl3) throws IOException {
-        
+
         positions_ = new ArrayList<>();
         normals_ = new ArrayList<>();
 
@@ -82,34 +83,35 @@ public final class Model {
 
     public void computeBoundingBox() {
 
-        float[] minVal = new float[3];
-        float[] maxVal = new float[3];
+        float[] modelMin = new float[3];
+        float[] modelMax = new float[3];
 
         if (positions_.isEmpty()) {
             return;
         }
 
         for (int i = 0; i < 3; i++) {
-            minVal[i] = 1e10f;
-            maxVal[i] = -1e10f;
+            modelMin[i] = 1e10f;
+            modelMax[i] = -1e10f;
         }
 
         for (int i = 0; i < positions_.size(); i += 3) {
             float x = positions_.get(i);
             float y = positions_.get(i + 1);
             float z = positions_.get(i + 2);
-            minVal[0] = Math.min(minVal[0], x);
-            minVal[1] = Math.min(minVal[1], y);
-            minVal[2] = Math.min(minVal[2], z);
-            maxVal[0] = Math.max(maxVal[0], x);
-            maxVal[1] = Math.max(maxVal[1], y);
-            maxVal[2] = Math.max(maxVal[2], z);
+            modelMin[0] = Math.min(modelMin[0], x);
+            modelMin[1] = Math.min(modelMin[1], y);
+            modelMin[2] = Math.min(modelMin[2], z);
+            modelMax[0] = Math.max(modelMax[0], x);
+            modelMax[1] = Math.max(modelMax[1], y);
+            modelMax[2] = Math.max(modelMax[2], z);
         }
-//        System.out.println("min (" + minVal[0] + ", " + minVal[1] + ", " + minVal[2] + ")");
-//        System.out.println("max (" + maxVal[0] + ", " + maxVal[1] + ", " + maxVal[2] + ")");
 
-        center = new Vec3((maxVal[0] + minVal[0]) / 2, (maxVal[1] + minVal[1]) / 2, (maxVal[2] + minVal[2]) / 2);
-//        center.print("center");
+        float[] diag = new float[]{modelMax[0] - modelMin[0], modelMax[1] - modelMin[1],
+            modelMax[2] - modelMin[2]};
+        scale = (float) (1.0 / Math.sqrt(diag[0] * diag[0] + diag[1] * diag[1] + diag[2] * diag[2]) * 1.5);
+        trans = new float[]{(float) (-scale * (modelMin[0] + 0.5 * diag[0])), (float) (-scale * (modelMin[1] + 0.5 * diag[1])),
+            (float) (-scale * (modelMin[2] + 0.5 * diag[2]))};
     }
 
     /**
@@ -304,10 +306,8 @@ public final class Model {
                     vertices_.put(normals_.get(idx.nIndex * 3 + 2));
                 }
 
-            } else {
-                if (needsTriangles) {
-                    indices_.put(pts.get(idx));
-                }
+            } else if (needsTriangles) {
+                indices_.put(pts.get(idx));
             }
         }
 
@@ -372,10 +372,6 @@ public final class Model {
             }
         }
         gl3.glBindVertexArray(0);
-    }
-
-    public Vec3 getCenter() {
-        return center;
     }
 
     public class IdxSet {

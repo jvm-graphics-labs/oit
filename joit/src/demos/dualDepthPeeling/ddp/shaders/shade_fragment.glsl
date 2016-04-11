@@ -12,12 +12,14 @@ uniform float Alpha;
 #define COLOR_FREQ 30.0
 #define ALPHA_FREQ 30.0
 
+in vec3 shading;
+
 #if 1
-vec4 ShadeFragment()
+vec4 shadeFragment()
 {
-	float xWorldPos = gl_TexCoord[0].x;
-	float yWorldPos = gl_TexCoord[0].y;
-	float diffuse = gl_TexCoord[0].z;
+	float xWorldPos = shading.x;
+	float yWorldPos = shading.y;
+	float diffuse = shading.z;
 
 	vec4 color;
 	float i = floor(xWorldPos * COLOR_FREQ);
@@ -30,7 +32,7 @@ vec4 ShadeFragment()
 	return color;
 }
 #else
-vec4 ShadeFragment()
+vec4 shadeFragment()
 {
 	vec4 color;
 	color.rgb = vec3(.4,.85,.0);
