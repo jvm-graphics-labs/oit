@@ -19,50 +19,11 @@ import glm.vec._3.Vec3;
  */
 public class InputListener implements KeyListener, MouseListener {
 
-//    private float radius;
-//    private Mat4 orient;
-//    private Mat4 tmpM;
-//    private Vec3 target;
-//    private Vec4 targetOffset;
-//    private Vec3 tmpV;
-//    private Mat4 view;
-//    private Vec2i firstInput;
-//    private Vec2i deltaInput;
-//    private Vec2 rotation;
-//    private long startPause;
-//    private Animator animator;
     private boolean rotating = false, panning = false, scaling = false;
     public static Vec2 rot = new Vec2(0, 45f);
     public static Vec3 pos = new Vec3(0, 0, 2);
     private Vec2i start = new Vec2i(), diff = new Vec2i();
-
-    public InputListener() {
-
-//        radius = 0.5f;
-//        orient = new Mat4();
-//        target = new Vec3(0f, .12495125f, 0f);
-//        targetOffset = new Vec4();
-//
-//        tmpV = new Vec3();
-//        tmpM = new Mat4();
-//
-//        view = new Mat4();
-//
-//        firstInput = new Vec2i();
-//        deltaInput = new Vec2i();
-//
-//        rotation = new Vec2();
-    }
-
-    public void update() {
-
-//        view
-//                .identity()
-//                .translate(0, 0, -radius)
-//                .mul(orient)
-//                .translate(target.negate(tmpV));
-    }
-
+    
     @Override
     public void mouseClicked(MouseEvent e) {
 
@@ -80,15 +41,7 @@ public class InputListener implements KeyListener, MouseListener {
 
     @Override
     public void mousePressed(MouseEvent e) {
-
-//        if (e.getButton() == MouseEvent.BUTTON1) {
-//
-//            firstInput.set(e.getX(), e.getY());
-//
-//        } else if (e.getButton() == MouseEvent.BUTTON3) {
-//
-//            firstInput.set(e.getX(), -e.getY());
-//        }
+        
         rotating = false;
         panning = false;
         scaling = false;
@@ -119,32 +72,7 @@ public class InputListener implements KeyListener, MouseListener {
 
     @Override
     public void mouseDragged(MouseEvent e) {
-
-//        if (e.getButton() == MouseEvent.BUTTON1) {
-//
-//            firstInput.sub(e.getX(), e.getY(), deltaInput);
-//
-//            rotation.add(-deltaInput.x * 0.01f, -deltaInput.y * 0.01f);
-//
-//            orient
-//                    .identity()
-//                    .rotateX(rotation.y)
-//                    .rotateY(rotation.x);
-//
-//            firstInput.set(e.getX(), e.getY());
-//
-//        } else if (e.getButton() == MouseEvent.BUTTON3) {
-//
-//            firstInput.sub(e.getX(), -e.getY(), deltaInput);
-//
-//            targetOffset.set(-deltaInput.x * (radius * 0.001f), -deltaInput.y * (radius * 0.001f), 0, 1);
-//
-//            orient.inverse(tmpM).mul(targetOffset);
-//
-//            target.add(targetOffset.x, targetOffset.y, targetOffset.z);
-//
-//            firstInput.set(e.getX(), -e.getY());
-//        }
+        
         diff.set(e.getX(), e.getY()).sub(start);
         start.set(e.getX(), e.getY());
 
@@ -165,43 +93,16 @@ public class InputListener implements KeyListener, MouseListener {
     @Override
     public void mouseWheelMoved(MouseEvent e) {
 
-//        radius += e.getRotation()[1] * radius / 10;
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-//        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-//            Settings.animator.stop();
-//        }
-//        if (e.getKeyCode() == KeyEvent.VK_R) {
-//            reset();
-//        }
-    }
-
-    private void reset() {
-
-//        radius = 0.5f;
-//        orient.identity();
-//        target.set(0f, .12495125f, 0f);
-//        targetOffset.set(0, 0, 0, 0);
-//
-//        tmpV.set(0, 0, 0);
-//        tmpM.identity();
-//
-//        view.identity();
-//
-//        firstInput.set(0, 0);
-//        deltaInput.set(0, 0);
-//
-//        rotation.set(0, 0);
+        
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_8:
-//                Viewer.showUI = !Viewer.showUI;
-                break;
             case KeyEvent.VK_Q:
                 Settings.useOQ = !Settings.useOQ;
                 break;

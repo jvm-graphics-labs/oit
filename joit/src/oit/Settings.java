@@ -19,6 +19,7 @@ public class Settings {
     public static boolean useOQ = true;
 
     public static int numPasses = 4;
+    public static int numGeoPasses = 0;
 
     public static Vec3 backgroundColor = new Vec3(1);
     

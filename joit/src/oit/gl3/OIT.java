@@ -19,23 +19,23 @@ import java.nio.IntBuffer;
  */
 public abstract class OIT {
 
-//    protected IntBuffer drawBuffers = GLBuffers.newDirectIntBuffer(new int[]{
-//        GL_COLOR_ATTACHMENT0,
-//        GL_COLOR_ATTACHMENT1,
-//        GL_COLOR_ATTACHMENT2,
-//        GL_COLOR_ATTACHMENT3,
-//        GL_COLOR_ATTACHMENT4,
-//        GL_COLOR_ATTACHMENT5,
-//        GL_COLOR_ATTACHMENT5}
-//    );
-    protected int[] drawBuffers = new int[]{
+    protected IntBuffer drawBuffers = GLBuffers.newDirectIntBuffer(new int[]{
         GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT1,
         GL_COLOR_ATTACHMENT2,
         GL_COLOR_ATTACHMENT3,
         GL_COLOR_ATTACHMENT4,
         GL_COLOR_ATTACHMENT5,
-        GL_COLOR_ATTACHMENT6};
+        GL_COLOR_ATTACHMENT6}
+    );
+//    protected int[] drawBuffers = new int[]{
+//        GL_COLOR_ATTACHMENT0,
+//        GL_COLOR_ATTACHMENT1,
+//        GL_COLOR_ATTACHMENT2,
+//        GL_COLOR_ATTACHMENT3,
+//        GL_COLOR_ATTACHMENT4,
+//        GL_COLOR_ATTACHMENT5,
+//        GL_COLOR_ATTACHMENT6};
 
     protected FloatBuffer clearColor, clearDepth;
 
