@@ -47,6 +47,7 @@ void main(void)
 
     float nearestDepth = -depthBlender.x;
     float furthestDepth = depthBlender.y;
+
     float alphaMultiplier = 1.0 - forwardTemp.w;
 
     if (fragDepth < nearestDepth || fragDepth > furthestDepth) {

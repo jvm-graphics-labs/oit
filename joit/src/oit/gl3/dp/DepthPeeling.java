@@ -5,23 +5,13 @@
  */
 package oit.gl3.dp;
 
-import static com.jogamp.opengl.GL.GL_CLAMP_TO_EDGE;
-import static com.jogamp.opengl.GL.GL_NEAREST;
-import static com.jogamp.opengl.GL.GL_TEXTURE_MAG_FILTER;
-import static com.jogamp.opengl.GL.GL_TEXTURE_MIN_FILTER;
-import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_S;
-import static com.jogamp.opengl.GL.GL_TEXTURE_WRAP_T;
 import static com.jogamp.opengl.GL2GL3.*;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
-import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import jglm.Jglm;
-import oit.BufferUtils;
 import oit.Resources;
-import oit.gl3.FullscreenQuad;
 import oit.gl3.OIT;
 import oit.gl3.Scene;
 import oit.gl3.Viewer;

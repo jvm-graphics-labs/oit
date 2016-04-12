@@ -44,20 +44,12 @@ public class DualDepthPeeling extends OIT {
         public final static int FRONT_BLENDER1 = 3;
         public final static int BACK_TEMP0 = 4;
         public final static int BACK_TEMP1 = 5;
-        public final static int BACK_BLENDER = 6;
-        public final static int MAX = 7;
-    }
-
-    private class Framebuffer {
-
-        public final static int SINGLE = 0;
-        public final static int BACK_BLENDER = 1;
-        public final static int MAX = 2;
+        public final static int MAX = 6;
     }
 
     private int[] programName = new int[Program.MAX];
     private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX),
-            framebufferName = GLBuffers.newDirectIntBuffer(Framebuffer.MAX);
+            framebufferName = GLBuffers.newDirectIntBuffer(1);
 
     @Override
     public void init(GL3 gl3) {
@@ -98,6 +90,11 @@ public class DualDepthPeeling extends OIT {
                     gl3.glGetUniformBlockIndex(programName[program], "Transform1"),
                     Semantic.Uniform.TRANSFORM1);
         }
+        gl3.glUseProgram(programName[Program.INIT]);
+        gl3.glUniform1i(
+                gl3.glGetUniformLocation(programName[Program.INIT], "opaqueDepthTex"),
+                Semantic.Sampler.OPAQUE_DEPTH_);
+
         gl3.glUniformBlockBinding(
                 programName[Program.PEEL],
                 gl3.glGetUniformBlockIndex(programName[Program.PEEL], "Parameters"),
@@ -142,7 +139,7 @@ public class DualDepthPeeling extends OIT {
                 Semantic.Sampler.FRONT_BLENDER);
         gl3.glUniform1i(
                 gl3.glGetUniformLocation(programName[Program.FINAL], "backBlenderTex"),
-                Semantic.Sampler.BACK_BLENDER);
+                Semantic.Sampler.OPAQUE_DEPTH_);
     }
 
     @Override
@@ -154,7 +151,7 @@ public class DualDepthPeeling extends OIT {
         /**
          * (1) Initialize Min-Max Depth Buffer.
          */
-        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.SINGLE));
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
 
         /**
          * Render targets 1 and 2 store the front and back colors
@@ -175,7 +172,6 @@ public class DualDepthPeeling extends OIT {
 //        gl3.glReadPixels(500, 500, 1, 1, GL_RGBA, GL_FLOAT, buffer);
 //        System.out.println("pixel (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat()
 //                + ", " + buffer.getFloat() + ")");
-
         /**
          * Render target 0 stores (-minDepth, maxDepth, alphaMultiplier).
          */
@@ -185,6 +181,7 @@ public class DualDepthPeeling extends OIT {
         gl3.glBlendEquation(GL_MAX);
 
         gl3.glUseProgram(programName[Program.INIT]);
+        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), 0, samplerName);
         scene.renderTransparent(gl3);
 
         /**
@@ -194,8 +191,10 @@ public class DualDepthPeeling extends OIT {
          * we use another render target to do the alpha blending.
          */
         gl3.glDrawBuffer(drawBuffers.get(6));
+        gl3.glColorMask(false, false, false, true);
         gl3.glClearColor(1, 1, 1, 0);
         gl3.glClear(GL_COLOR_BUFFER_BIT);
+        gl3.glColorMask(true, true, true, true);
 
         int currId = 0;
 
@@ -225,7 +224,8 @@ public class DualDepthPeeling extends OIT {
 
             gl3.glUseProgram(programName[Program.PEEL]);
             bindTextureRect(gl3, textureName.get(Texture.DEPTH0 + prevId), Semantic.Sampler.DEPTH, samplerName);
-            bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + prevId), Semantic.Sampler.FRONT_BLENDER, samplerName);
+            bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + prevId), Semantic.Sampler.FRONT_BLENDER, 
+                    samplerName);
 
             scene.renderTransparent(gl3);
 
@@ -264,7 +264,7 @@ public class DualDepthPeeling extends OIT {
 
         gl3.glUseProgram(programName[Program.FINAL]);
         bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + currId), Semantic.Sampler.FRONT_BLENDER, samplerName);
-        bindTextureRect(gl3, textureName.get(Texture.BACK_BLENDER), Semantic.Sampler.BACK_BLENDER, samplerName);
+        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_DEPTH_, samplerName);
 
         Viewer.fullscreenQuad.render(gl3);
     }
@@ -278,7 +278,7 @@ public class DualDepthPeeling extends OIT {
     private void initTargets(GL3 gl3) {
 
         gl3.glGenTextures(Texture.MAX, textureName);
-        gl3.glGenFramebuffers(Framebuffer.MAX, framebufferName);
+        gl3.glGenFramebuffers(1, framebufferName);
 
         for (int i = 0; i < 2; i++) {
 
@@ -307,19 +307,7 @@ public class DualDepthPeeling extends OIT {
                     GL_RGBA, GL_FLOAT, null);
         }
 
-        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.BACK_BLENDER));
-
-        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
-
-        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB8, Resources.imageSize.x, Resources.imageSize.y, 0,
-                GL_RGB, GL_FLOAT, null);
-
-        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.BACK_BLENDER));
-        gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
-                textureName.get(Texture.BACK_BLENDER), 0);
-
-        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.SINGLE));
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
         for (int i = 0; i < 2; i++) {
             gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 3 * i, GL_TEXTURE_RECTANGLE,
                     textureName.get(Texture.DEPTH0 + i), 0);
@@ -329,16 +317,16 @@ public class DualDepthPeeling extends OIT {
                     textureName.get(Texture.BACK_TEMP0 + i), 0);
         }
         gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT6, GL_TEXTURE_RECTANGLE,
-                textureName.get(Texture.BACK_BLENDER), 0);
+                Viewer.textureName.get(Viewer.Texture.COLOR), 0);
     }
 
     private void deleteTargets(GL3 gl3) {
         gl3.glDeleteTextures(Texture.MAX, textureName);
-        gl3.glDeleteFramebuffers(Framebuffer.MAX, framebufferName);
+        gl3.glDeleteFramebuffers(1, framebufferName);
     }
 
     @Override
-    public void dispose(GL3 gl3) {    
+    public void dispose(GL3 gl3) {
         deleteTargets(gl3);
     }
 }

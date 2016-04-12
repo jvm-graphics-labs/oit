@@ -20,6 +20,5 @@ void main(void)
 {
     vec4 frontColor = texture(colorTex, gl_FragCoord.xy);
     vec3 opaqueColor = texture(opaqueColorTex, gl_FragCoord.xy).rgb;
-    outputColor = vec4(frontColor.rgb + opaqueColor * frontColor.a, 1);
-    
+    outputColor = vec4(frontColor.rgb + opaqueColor * frontColor.a, 1);    
 }

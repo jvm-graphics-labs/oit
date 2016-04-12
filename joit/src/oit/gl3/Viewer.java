@@ -213,6 +213,11 @@ public class Viewer implements GLEventListener {
         gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
                 textureName.get(Texture.COLOR), 0);
     }
+    
+    private void deleteTargets(GL3 gl3) {
+        gl3.glDeleteTextures(Texture.MAX, textureName);
+        gl3.glDeleteFramebuffers(1, framebufferName);
+    }
 
     private void initPrograms(GL3 gl3) {
 
@@ -265,7 +270,7 @@ public class Viewer implements GLEventListener {
         for (int i = 0; i < Oit.MAX; i++) {
             oit[i].init(gl3);
         }
-        newOit = Oit.DEPTH_PEELING;
+        newOit = Oit.DUAL_DEPTH_PEELING;
         currOit = newOit;
     }
 
@@ -361,7 +366,17 @@ public class Viewer implements GLEventListener {
             title += ", average time: " + String.format("%.2f", (average / 1_000_000)) + " ms";
             title += ", theoretic fps: " + String.format("%.2f", (1_000 / (average / 1_000_000)));
             title += ", alpha: " + Resources.opacity + ", geometric passes: " + Resources.numGeoPasses;
-            title += ", maxLayers: " + Resources.numLayers;
+            switch (currOit) {
+                case Oit.DEPTH_PEELING:
+                case Oit.DUAL_DEPTH_PEELING:
+                    title += ", maxLayers: " + Resources.numLayers + ", occlusion query: " + Resources.useOQ;
+                    break;
+                case Oit.WEIGHTED_AVERAGE:
+                case Oit.WEIGHTED_SUM:
+                case Oit.WEIGHTED_BLENDED:
+                    title += ", weigth parameter: " + Resources.weight;
+                    break;
+            }
             Resources.glWindow.setTitle(title);
             times.clear();
             start = now;
@@ -375,6 +390,9 @@ public class Viewer implements GLEventListener {
         GL3 gl3 = glad.getGL().getGL3();
 
         Resources.imageSize.set(width, height);
+        
+        deleteTargets(gl3);
+        initTargets(gl3);
 
         oit[currOit].reshape(gl3);
 
@@ -396,8 +414,7 @@ public class Viewer implements GLEventListener {
 
         GL3 gl3 = glad.getGL().getGL3();
 
-        gl3.glDeleteTextures(Texture.MAX, textureName);
-        gl3.glDeleteFramebuffers(1, framebufferName);
+        deleteTargets(gl3);
 
         oit[currOit].dispose(gl3);
 

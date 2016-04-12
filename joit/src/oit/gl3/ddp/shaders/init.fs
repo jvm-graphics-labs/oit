@@ -11,9 +11,14 @@
 
 #include semantic.glsl
 
-layout (location = FRAG_COLOR) out vec4 outputColor;
+layout (location = FRAG_COLOR) out vec2 outputColor;
+
+uniform sampler2DRect opaqueDepthTex;
 
 void main(void)
 {
-    outputColor = vec4(-gl_FragCoord.z, gl_FragCoord.z, 0, 1);
+    //outputColor = vec2(-gl_FragCoord.z, gl_FragCoord.z);
+
+    float opaqueDepth = texture(opaqueDepthTex, gl_FragCoord.xy).r;
+    outputColor = vec2(-gl_FragCoord.z, min(gl_FragCoord.z, opaqueDepth));
 }

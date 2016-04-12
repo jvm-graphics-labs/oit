@@ -77,7 +77,7 @@ public class Semantic {
          */
         public static final int FRONT_BLENDER = 1;
         public static final int BACK_TEMP = 0;
-        public static final int BACK_BLENDER = 2;
+        public static final int OPAQUE_DEPTH_ = 0;
         /**
          * Weighted Average.
          */
