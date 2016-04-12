@@ -7,6 +7,9 @@ package oit.gl3;
 
 import com.jogamp.common.nio.Buffers;
 import static com.jogamp.opengl.GL.*;
+import static com.jogamp.opengl.GL2ES2.*;
+import static com.jogamp.opengl.GL2ES3.GL_VERTEX_ATTRIB_ARRAY_DIVISOR;
+import static com.jogamp.opengl.GL2ES3.GL_VERTEX_ATTRIB_ARRAY_INTEGER;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import glm.vec._3.Vec3;
@@ -15,6 +18,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -46,7 +50,6 @@ public final class Model {
 
     private IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX),
             vertexArrayName = GLBuffers.newDirectIntBuffer(1);
-    private int[] objects;
     public static float scale;
     public static float[] trans;
 
@@ -71,8 +74,6 @@ public final class Model {
         System.out.println(getPositionCount() + " vertices");
         System.out.println(getIndexCount() / 3 + " triangles");
 
-        objects = new int[Objects.size.ordinal()];
-
         initBuffer(gl3);
 
         initVertexArray(gl3);
@@ -91,42 +92,28 @@ public final class Model {
 
     private void initVertexArray(GL3 gl3) {
 
-        gl3.glBindBuffer(GL3.GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
-
-        gl3.glGenVertexArrays(1, objects, Objects.vao.ordinal());
-        gl3.glBindVertexArray(objects[Objects.vao.ordinal()]);
+        gl3.glGenVertexArrays(1, vertexArrayName);
+        gl3.glBindVertexArray(vertexArrayName.get(0));
         {
-            gl3.glBindBuffer(GL3.GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
-            {
-                gl3.glEnableVertexAttribArray(0);
-                gl3.glEnableVertexAttribArray(1);
-                {
-                    int stride = vtxSize * Buffers.SIZEOF_FLOAT;
-                    int offset = pOffset;
-                    gl3.glVertexAttribPointer(0, 3, GL3.GL_FLOAT, false, stride, offset);
-                    offset = nOffset * Buffers.SIZEOF_FLOAT;
-                    gl3.glVertexAttribPointer(1, 3, GL3.GL_FLOAT, false, stride, offset);
-                }
-            }
+            gl3.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
+
+            int stride = vtxSize * Buffers.SIZEOF_FLOAT;
+            int offset = pOffset;
+            gl3.glVertexAttribPointer(Semantic.Attr.POSITION, 3, GL_FLOAT, false, stride, offset);
+            offset = nOffset * Buffers.SIZEOF_FLOAT;
+            gl3.glVertexAttribPointer(Semantic.Attr.NORMAL, 3, GL_FLOAT, false, stride, offset);
+
+            gl3.glEnableVertexAttribArray(Semantic.Attr.POSITION);
+            gl3.glEnableVertexAttribArray(Semantic.Attr.NORMAL);
+
+            gl3.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
         }
         gl3.glBindVertexArray(0);
-
-//        gl3.glGenVertexArrays(1, vertexArrayName);
-//        gl3.glBindVertexArray(vertexArrayName.get(0));
-//
-//        gl3.glVertexAttribPointer(Semantic.Attr.POSITION, 3, GL_FLOAT, false, Vec3.SIZE * 2, 0);
-//        gl3.glVertexAttribPointer(Semantic.Attr.NORMAL, 3, GL_FLOAT, false, Vec3.SIZE * 2, Vec3.SIZE);
-//
-//        gl3.glEnableVertexAttribArray(Semantic.Attr.POSITION);
-//        gl3.glEnableVertexAttribArray(Semantic.Attr.NORMAL);
-//
-//        gl3.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
     }
 
-    public void render(GL3 gl3) {
-
-        gl3.glBindVertexArray(objects[Objects.vao.ordinal()]);
-        gl3.glDrawElements(GL3.GL_TRIANGLES, getCompiledIndexCount(), GL3.GL_UNSIGNED_INT, 0);
+    public void render(GL3 gl3) {        
+        gl3.glBindVertexArray(vertexArrayName.get(0));
+        gl3.glDrawElements(GL_TRIANGLES, getCompiledIndexCount(), GL_UNSIGNED_INT, 0);
     }
 
     /**
@@ -408,13 +395,5 @@ public final class Model {
 
     public final int getCompiledIndexCount() {
         return pIndex.size();
-    }
-
-    private enum Objects {
-
-        vbo,
-        ibo,
-        vao,
-        size
     }
 }

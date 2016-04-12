@@ -5,12 +5,21 @@
  */
 package oit.gl3.wb;
 
+import static com.jogamp.opengl.GL2GL3.*;
 import com.jogamp.opengl.GL3;
+import com.jogamp.opengl.util.GLBuffers;
+import com.jogamp.opengl.util.glsl.ShaderCode;
+import com.jogamp.opengl.util.glsl.ShaderProgram;
+import java.nio.IntBuffer;
 import jglm.Jglm;
 import jglm.Mat4;
 import jglm.Vec2i;
-import oit.gl3.FullscreenQuad;
+import oit.Resources;
+import oit.gl3.OIT;
 import oit.gl3.Scene;
+import oit.gl3.Semantic;
+import oit.gl3.Viewer;
+import oit.gl3.ddp.DualDepthPeeling;
 import oit.gl3.wb.glsl.Final;
 import oit.gl3.wb.glsl.Init;
 
@@ -18,167 +27,181 @@ import oit.gl3.wb.glsl.Init;
  *
  * @author gbarbieri
  */
-public class WeightedBlended {
+public class WeightedBlended extends OIT {
 
-    private int[] accumulationFboId;
-    private int[] accumulationTexId;
-    private int[] sampler;
-    private Vec2i imageSize;
-    private Init init;
-    private Final finale;
-    private FullscreenQuad fullscreenQuad;
-    private float weightParameter;
+    private static final String SHADERS_ROOT = "/oit/gl3/wb/shaders/";
+    private static final String[] SHADERS_SRC = new String[]{"init", "final"};
 
-    public WeightedBlended(GL3 gl3, int blockBinding) {
+    private class Program {
 
-        initSampler(gl3);
-
-        buildShaders(gl3, blockBinding);
-
-        fullscreenQuad = new FullscreenQuad(gl3);
-        
-        weightParameter = .5f;
+        public final static int INIT = 0;
+        public final static int FINAL = 1;
+        public final static int MAX = 2;
     }
 
+    private class Texture {
+
+        public static final int WEIGHTED_SUM = 0;
+        public static final int TRANSM_PRODUCT = 1;
+        public static final int MAX = 2;
+    }
+
+    private int[] programName = new int[Program.MAX];
+    private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX),
+            framebufferName = GLBuffers.newDirectIntBuffer(1);
+
+    @Override
+    public void init(GL3 gl3) {
+
+        initPrograms(gl3);
+
+        initTargets(gl3);
+    }
+
+    private void initPrograms(GL3 gl3) {
+
+        {
+            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vs", null, null, null, true);
+            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
+
+            ShaderProgram shaderProgram = new ShaderProgram();
+            shaderProgram.add(vertShader);
+            shaderProgram.add(fragShader);
+
+            shaderProgram.link(gl3, System.out);
+
+            programName[Program.INIT] = shaderProgram.program();
+
+            gl3.glUniformBlockBinding(
+                    programName[Program.INIT],
+                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform0"),
+                    Semantic.Uniform.TRANSFORM0);
+
+            gl3.glUniformBlockBinding(
+                    programName[Program.INIT],
+                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform1"),
+                    Semantic.Uniform.TRANSFORM1);
+
+            gl3.glUniformBlockBinding(
+                    programName[Program.INIT],
+                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"),
+                    Semantic.Uniform.PARAMETERS);
+        }
+
+        {
+            ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[Program.FINAL], "vs", null, true);
+            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[Program.FINAL], "fs", null, true);
+
+            ShaderProgram shaderProgram = new ShaderProgram();
+            shaderProgram.add(vertShader);
+            shaderProgram.add(fragShader);
+
+            shaderProgram.link(gl3, System.out);
+
+            programName[Program.FINAL] = shaderProgram.program();
+
+            gl3.glUniformBlockBinding(
+                    programName[Program.INIT],
+                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform2"),
+                    Semantic.Uniform.TRANSFORM2);
+
+            gl3.glUseProgram(programName[Program.FINAL]);
+            gl3.glUniform1i(gl3.glGetUniformLocation(programName[Program.FINAL], "weightedSum"),
+                    Semantic.Sampler.WEIGHTED_SUM);
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.FINAL], "transmProduct"),
+                    Semantic.Sampler.TRANSM_PRODUCT);
+        }
+    }
+
+    @Override
     public void render(GL3 gl3, Scene scene) {
 
-        gl3.glDisable(GL3.GL_DEPTH_TEST);
+        gl3.glDisable(GL_DEPTH_TEST);
         /**
          * (1) Geometry Pass.
          */
-        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, accumulationFboId[0]);
-        gl3.glDrawBuffers(2, new int[]{GL3.GL_COLOR_ATTACHMENT0, GL3.GL_COLOR_ATTACHMENT1}, 0);
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
+        drawBuffers.position(0);
+        gl3.glDrawBuffers(2, drawBuffers);
         /**
          * Render target 0 stores a sum (weighted RGBA colors), clear it to 0.f
          * Render target 1 stores a product (transmittances), clear it to 1.f.
          */
-        float[] clearColorZero = new float[]{0f, 0f, 0f, 1f};
-        float[] clearColorOne = new float[]{0f, 1f, 1f, 1f};
-        gl3.glClearBufferfv(GL3.GL_COLOR, 0, clearColorZero, 0);
-        gl3.glClearBufferfv(GL3.GL_COLOR, 1, clearColorOne, 0);
+        clearColor.put(new float[]{0f, 0f, 0f, 1f}).rewind();
+        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
+        clearColor.put(new float[]{1f, 1f, 1f, 1f}).rewind();
+        gl3.glClearBufferfv(GL_COLOR, 1, clearColor);
 
-        gl3.glEnable(GL3.GL_BLEND);
-        gl3.glBlendEquation(GL3.GL_FUNC_ADD);
-        gl3.glBlendFuncSeparate(GL3.GL_ONE, GL3.GL_ONE, GL3.GL_ZERO, GL3.GL_ONE_MINUS_SRC_COLOR);
+        gl3.glEnable(GL_BLEND);
+        gl3.glBlendEquation(GL_FUNC_ADD);
+        gl3.glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 
-        init.bind(gl3);
-        {
-            gl3.glUniform1f(init.getDepthScaleUL(), weightParameter);
-            scene.render(gl3, init.getModelToWorldUL(), init.getAlphaUL());
-        }
-        init.unbind(gl3);
+        gl3.glUseProgram(programName[Program.INIT]);
+        scene.renderTransparent(gl3);
 
-        gl3.glDisable(GL3.GL_BLEND);
+        gl3.glDisable(GL_BLEND);
         /**
          * (2) Compositing Pass.
          */
-        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, 0);
-        gl3.glDrawBuffer(GL3.GL_BACK);
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        gl3.glDrawBuffer(GL_BACK);
 
-        finale.bind(gl3);
-        {
-            gl3.glUniform3f(finale.getBackgroundColorUL(), .1f, .3f, .7f);
+        gl3.glUseProgram(programName[Program.FINAL]);
 
-            gl3.glActiveTexture(GL3.GL_TEXTURE0);
-            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[0]);
-            gl3.glBindSampler(0, sampler[0]);
-            {
-                gl3.glActiveTexture(GL3.GL_TEXTURE1);
-                gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[1]);
-                gl3.glBindSampler(1, sampler[0]);
-                {
-                    fullscreenQuad.render(gl3);
-                }
-                gl3.glBindSampler(1, 0);
-            }
-            gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, 0);
-            gl3.glBindSampler(0, 0);
-        }
-        finale.unbind(gl3);
+        bindTextureRect(gl3, textureName.get(Texture.WEIGHTED_SUM), Semantic.Sampler.WEIGHTED_SUM, samplerName);
+        bindTextureRect(gl3, textureName.get(Texture.TRANSM_PRODUCT), Semantic.Sampler.TRANSM_PRODUCT, samplerName);
+
+        Viewer.fullscreenQuad.render(gl3);
     }
 
-    private void buildShaders(GL3 gl3, int blockBinding) {
-
-        String shadersFilepath = "/oit/gl3/wb/glsl/shaders/";
-
-        init = new Init(gl3, shadersFilepath, new String[]{"init_VS.glsl", "shade_VS.glsl"},
-                new String[]{"init_FS.glsl", "shade_FS.glsl"}, blockBinding);
-
-        Mat4 modelToClip = Jglm.orthographic2D(0, 1, 0, 1);
-
-        finale = new Final(gl3, shadersFilepath, new String[]{"final_VS.glsl"}, new String[]{"final_FS.glsl"});
-        finale.bind(gl3);
-        {
-            gl3.glUniform1i(finale.getColorTex0UL(), 0);
-            gl3.glUniform1i(finale.getColorTex1UL(), 1);
-            gl3.glUniformMatrix4fv(finale.getModelToClipUL(), 1, false, modelToClip.toFloatArray(), 0);
-        }
-        finale.unbind(gl3);
+    @Override
+    public void reshape(GL3 gl3) {
+        deleteTargets(gl3);
+        initTargets(gl3);
     }
 
-    public void reshape(GL3 gl3, int width, int height) {
+    private void initTargets(GL3 gl3) {
 
-        imageSize = new Vec2i(width, height);
+        gl3.glGenTextures(Texture.MAX, textureName);
 
-        deleteRenderTargets(gl3);
-        initRenderTargets(gl3);
+        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.WEIGHTED_SUM));
+
+        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
+
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA16F, Resources.imageSize.x, Resources.imageSize.y, 0, GL_RGBA,
+                GL_FLOAT, null);
+
+        gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName.get(Texture.TRANSM_PRODUCT));
+
+        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
+        gl3.glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
+
+        gl3.glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R16F, Resources.imageSize.x, Resources.imageSize.y, 0, GL_RED,
+                GL_FLOAT, null);
+
+        gl3.glGenFramebuffers(1, framebufferName);
+
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
+
+        gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
+                textureName.get(Texture.WEIGHTED_SUM), 0);
+        gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_RECTANGLE,
+                textureName.get(Texture.TRANSM_PRODUCT), 0);
     }
 
-    private void initRenderTargets(GL3 gl3) {
-
-        accumulationTexId = new int[2];
-        gl3.glGenTextures(2, accumulationTexId, 0);
-
-        gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[0]);
-
-        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
-
-        gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_RGBA16F,
-                imageSize.x, imageSize.y, 0, GL3.GL_RGBA, GL3.GL_FLOAT, null);
-
-        gl3.glBindTexture(GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[1]);
-
-        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_BASE_LEVEL, 0);
-        gl3.glTexParameteri(GL3.GL_TEXTURE_RECTANGLE, GL3.GL_TEXTURE_MAX_LEVEL, 0);
-
-        gl3.glTexImage2D(GL3.GL_TEXTURE_RECTANGLE, 0, GL3.GL_R16F,
-                imageSize.x, imageSize.y, 0, GL3.GL_RED, GL3.GL_FLOAT, null);
-
-        accumulationFboId = new int[1];
-        gl3.glGenFramebuffers(1, accumulationFboId, 0);
-
-        gl3.glBindFramebuffer(GL3.GL_FRAMEBUFFER, accumulationFboId[0]);
-
-        gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT0,
-                GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[0], 0);
-        gl3.glFramebufferTexture2D(GL3.GL_FRAMEBUFFER, GL3.GL_COLOR_ATTACHMENT1,
-                GL3.GL_TEXTURE_RECTANGLE, accumulationTexId[1], 0);
+    private void deleteTargets(GL3 gl3) {
+        gl3.glDeleteFramebuffers(1, framebufferName);
+        gl3.glDeleteTextures(Texture.MAX, textureName);
     }
 
-    private void deleteRenderTargets(GL3 gl3) {
-
-        if (accumulationFboId != null) {
-
-            gl3.glDeleteFramebuffers(accumulationFboId.length, accumulationFboId, 0);
-            accumulationFboId = null;
-        }
-
-        if (accumulationTexId != null) {
-
-            gl3.glDeleteFramebuffers(accumulationTexId.length, accumulationTexId, 0);
-            accumulationTexId = null;
-        }
-    }
-
-    private void initSampler(GL3 gl3) {
-
-        sampler = new int[1];
-        gl3.glGenSamplers(1, sampler, 0);
-
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
-        gl3.glSamplerParameteri(sampler[0], GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
+    @Override
+    public void dispose(GL3 gl3) {
+        deleteTargets(gl3);
     }
 }

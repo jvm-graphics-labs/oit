@@ -15,6 +15,7 @@ import oit.Resources;
 import oit.gl3.OIT;
 import oit.gl3.Scene;
 import oit.gl3.Semantic;
+import oit.gl3.Viewer;
 
 /**
  *
@@ -40,15 +41,13 @@ public class WeightedAverage extends OIT {
     }
 
     private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX),
-            framebufferName = GLBuffers.newDirectIntBuffer(1), samplerName = GLBuffers.newDirectIntBuffer(1);
+            framebufferName = GLBuffers.newDirectIntBuffer(1);
     private int[] programName = new int[Program.MAX];
 
     @Override
     public void init(GL3 gl3) {
 
         initPrograms(gl3);
-
-        initSampler(gl3);
 
         initTargets(gl3);
     }
@@ -113,16 +112,6 @@ public class WeightedAverage extends OIT {
 
     }
 
-    private void initSampler(GL3 gl3) {
-
-        gl3.glGenSamplers(1, samplerName);
-
-        gl3.glSamplerParameteri(samplerName.get(0), GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(samplerName.get(0), GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(samplerName.get(0), GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_NEAREST);
-        gl3.glSamplerParameteri(samplerName.get(0), GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_NEAREST);
-    }
-
     private void initTargets(GL3 gl3) {
 
         gl3.glGenTextures(Texture.MAX, textureName);
@@ -185,23 +174,21 @@ public class WeightedAverage extends OIT {
 //            gl3.glUniform3f(finale.getBackgroundColorUL(), 1, 1, 1);
         bindTextureRect(gl3, textureName.get(Texture.SUM_COLOR), Semantic.Sampler.SUM_COLOR, samplerName);
         bindTextureRect(gl3, textureName.get(Texture.COUNT), Semantic.Sampler.COUNT, samplerName);
-        Resources.fullscreenQuad.render(gl3);
+        Viewer.fullscreenQuad.render(gl3);
     }
 
     @Override
     public void reshape(GL3 gl3) {
-
         deleteTargets(gl3);
         initTargets(gl3);
     }
 
     @Override
     public void dispose(GL3 gl3) {
-
+        deleteTargets(gl3);
     }
 
     private void deleteTargets(GL3 gl3) {
-
         gl3.glDeleteFramebuffers(1, framebufferName);
         gl3.glDeleteFramebuffers(Texture.MAX, textureName);
     }

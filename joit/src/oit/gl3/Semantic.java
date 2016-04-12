@@ -83,6 +83,11 @@ public class Semantic {
          */
         public static final int SUM_COLOR = 0;
         public static final int COUNT = 1;
+        /**
+         * Weighted Blended.
+         */
+        public static final int WEIGHTED_SUM = 0;
+        public static final int TRANSM_PRODUCT = 1;
     }
 
     public static class Storage {

@@ -13,6 +13,7 @@ import static com.jogamp.opengl.GL2GL3.*;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
@@ -23,14 +24,19 @@ import glm.glm;
 import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import jglm.Jglm;
+import oit.BufferUtils;
 import oit.InputListener;
 import oit.Resources;
 import oit.gl3.ddp.DualDepthPeeling;
 import oit.gl3.wa.WeightedAverage;
+import oit.gl3.wb.WeightedBlended;
 import oit.gl3.ws.WeightedSum;
 
 /**
@@ -42,6 +48,7 @@ public class Viewer implements GLEventListener {
     public static final String MODEL = "/data/dragon.obj";
     public static final String SHADERS_ROOT = "/oit/gl3/shaders/";
     public static final String[] SHADERS_SRC = new String[]{"opaque", "shade"};
+    public static final String TITLE = "OIT";
 
     public static void main(String[] args) {
 
@@ -58,13 +65,19 @@ public class Viewer implements GLEventListener {
         Resources.glWindow.setFullscreen(false);
         Resources.glWindow.setPointerVisible(true);
         Resources.glWindow.confinePointer(false);
-        Resources.glWindow.setTitle("Order Independent Transparency");
+        Resources.glWindow.setTitle(TITLE);
 
         Viewer viewer = new Viewer();
 
         Resources.glWindow.addGLEventListener(viewer);
 
+        InputListener inputListener = new InputListener();
+        Resources.glWindow.addMouseListener(inputListener);
+        Resources.glWindow.addKeyListener(inputListener);
+
         Resources.animator = new Animator(Resources.glWindow);
+        Resources.animator.setRunAsFastAsPossible(true);
+        Resources.animator.setExclusiveContext(true);
         Resources.animator.start();
 
         Resources.glWindow.setVisible(true);
@@ -76,14 +89,17 @@ public class Viewer implements GLEventListener {
         public static final int DUAL_DEPTH_PEELING = 1;
         public static final int WEIGHTED_AVERAGE = 2;
         public static final int WEIGHTED_SUM = 3;
-        public static final int MAX = 4;
+        public static final int WEIGHTED_BLENDED = 4;
+        public static final int MAX = 5;
     }
 
     public class Buffer {
 
         public static final int TRANSFORM0 = 0;
         public static final int TRANSFORM1 = 1;
-        public static final int MAX = 2;
+        public static final int TRANSFORM2 = 2;
+        public static final int PARAMETERS = 3;
+        public static final int MAX = 4;
     }
 
     public class Texture {
@@ -95,18 +111,24 @@ public class Viewer implements GLEventListener {
 
     public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX),
             textureName = GLBuffers.newDirectIntBuffer(Texture.MAX);
-    private InputListener inputListener;
-    private Scene scene;
-    private IntBuffer framebufferName = GLBuffers.newDirectIntBuffer(1);
-    private Mat4 view = new Mat4(), proj = new Mat4();
-    private FloatBuffer clearColor = GLBuffers.newDirectFloatBuffer(4), clearDepth = GLBuffers.newDirectFloatBuffer(1);
-    private int programName, currOit;
+    public static int newOit;
     public static OIT[] oit = new OIT[Oit.MAX];
+    public static FullscreenQuad fullscreenQuad;
+
+    private Scene scene;
+    private IntBuffer framebufferName = GLBuffers.newDirectIntBuffer(1), queryName = GLBuffers.newDirectIntBuffer(1),
+            timeBuffer = GLBuffers.newDirectIntBuffer(1);
+    private Mat4 view = new Mat4(), proj = new Mat4();
+    private int programName, currOit;
+    private long start;
+    private ArrayList<Integer> times = new ArrayList<>();
 
     @Override
     public void init(GLAutoDrawable glad) {
 
         GL3 gl3 = glad.getGL().getGL3();
+
+        System.out.println("setSwapInterval(0): " + GLContext.getCurrent().setSwapInterval(0));
 
         try {
             scene = new Scene(gl3);
@@ -114,28 +136,24 @@ public class Viewer implements GLEventListener {
             Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        inputListener = new InputListener();
-        Resources.glWindow.addMouseListener(inputListener);
-        Resources.glWindow.addKeyListener(inputListener);
-
         initBuffers(gl3);
 
         initTargets(gl3);
 
         initPrograms(gl3);
 
+        initSampler(gl3);
+
         initOIT(gl3);
+
+        gl3.glGenQueries(1, queryName);
 
         gl3.glDisable(GL_CULL_FACE);
 
-        clearColor.put(new float[]{1, 1, 1, 1}).rewind();
-        clearDepth.put(new float[]{1}).rewind();
-        
-        Resources.fullscreenQuad = new FullscreenQuad(gl3);
+        fullscreenQuad = new FullscreenQuad(gl3);
+        gl3.glGenQueries(1, OIT.queryName);
 
-        gl3.setSwapInterval(0);
-        Resources.animator.setRunAsFastAsPossible(true);
-        Resources.animator.setUpdateFPSFrames(30, System.out);
+        start = System.currentTimeMillis();
 
         checkError(gl3, "init");
     }
@@ -146,12 +164,25 @@ public class Viewer implements GLEventListener {
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
         gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE * 2, null, GL_DYNAMIC_DRAW);
-        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM0, bufferName.get(Buffer.TRANSFORM0));
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM1));
         gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, null, GL_DYNAMIC_DRAW);
-        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM1, bufferName.get(Buffer.TRANSFORM1));
 
+        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES * 2, Resources.parameters, GL_DYNAMIC_DRAW);
+
+        ByteBuffer modelToClip = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
+        modelToClip.asFloatBuffer().put(glm.ortho_(0, 1, 0, 1).toFa_());
+
+        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, modelToClip, GL_DYNAMIC_DRAW);
+
+        BufferUtils.destroyDirectBuffer(modelToClip);
+
+        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM0, bufferName.get(Buffer.TRANSFORM0));
+        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM1, bufferName.get(Buffer.TRANSFORM1));
+        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM2, bufferName.get(Buffer.TRANSFORM2));
+        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
     }
 
     private void initTargets(GL3 gl3) {
@@ -214,18 +245,28 @@ public class Viewer implements GLEventListener {
                 Semantic.Uniform.PARAMETERS);
     }
 
+    private void initSampler(GL3 gl3) {
+
+        gl3.glGenSamplers(1, OIT.samplerName);
+
+        gl3.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl3.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl3.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
     private void initOIT(GL3 gl3) {
 
         oit[Oit.DEPTH_PEELING] = new DepthPeeling();
         oit[Oit.DUAL_DEPTH_PEELING] = new DualDepthPeeling();
         oit[Oit.WEIGHTED_AVERAGE] = new WeightedAverage();
         oit[Oit.WEIGHTED_SUM] = new WeightedSum();
-
+        oit[Oit.WEIGHTED_BLENDED] = new WeightedBlended();
         for (int i = 0; i < Oit.MAX; i++) {
             oit[i].init(gl3);
         }
-
-        currOit = Oit.WEIGHTED_SUM;
+        newOit = Oit.DEPTH_PEELING;
+        currOit = newOit;
     }
 
     @Override
@@ -244,18 +285,87 @@ public class Viewer implements GLEventListener {
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, Resources.matBuffer);
         }
+        {
+            Resources.parameters.putFloat(0 * Float.BYTES, Resources.opacity);
+            Resources.parameters.putFloat(1 * Float.BYTES, Resources.weight);
 
-//        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
-//        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
-//        gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
-//
-//        gl3.glEnable(GL_DEPTH_TEST);
-//
-//        gl3.glUseProgram(programName);
-//        scene.renderOpaque(gl3);
-        oit[currOit].render(gl3, scene);
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, Resources.parameters);
+        }
+
+        if (newOit != currOit) {
+            oit[currOit].dispose(gl3);
+            oit[newOit].init(gl3);
+            currOit = newOit;
+        }
+
+        Resources.numGeoPasses = 0;
+
+        gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
+        OIT.clearColor.put(new float[]{1, 1, 1, 1}).rewind();
+        OIT.clearDepth.put(new float[]{1}).rewind();
+        gl3.glClearBufferfv(GL_COLOR, 0, OIT.clearColor);
+        gl3.glClearBufferfv(GL_DEPTH, 0, OIT.clearDepth);
+
+        gl3.glEnable(GL_DEPTH_TEST);
+
+        gl3.glUseProgram(programName);
+//        gl3.glColorMask(false, false, false, false);
+        scene.renderOpaque(gl3);
+//        gl3.glColorMask(true, true, true, true);
+
+        // Beginning of the time query
+        gl3.glBeginQuery(GL_TIME_ELAPSED, queryName.get(0));
+        {
+            oit[currOit].render(gl3, scene);
+        }
+        // End of the time query
+        gl3.glEndQuery(GL_TIME_ELAPSED);
+        // If the result of the query isn't here yet, we wait here...
+        gl3.glGetQueryObjectuiv(queryName.get(0), GL_QUERY_RESULT, timeBuffer);
+        times.add(timeBuffer.get(0));
+
+        manageTitle();
 
         checkError(gl3, "display");
+    }
+
+    private void manageTitle() {
+
+        long now = System.currentTimeMillis();
+        long diff = now - start;
+        if (diff > 1_000) {
+            double average = 0;
+            for (Integer time : times) {
+                average += time;
+            }
+            average /= times.size();
+            String title = TITLE;
+            switch (currOit) {
+                case Oit.DEPTH_PEELING:
+                    title += ": Depth Peeling";
+                    break;
+                case Oit.DUAL_DEPTH_PEELING:
+                    title += ": Dual Depth Peeling";
+                    break;
+                case Oit.WEIGHTED_AVERAGE:
+                    title += ": Weighted Average";
+                    break;
+                case Oit.WEIGHTED_SUM:
+                    title += ": Weighted Sum";
+                    break;
+                case Oit.WEIGHTED_BLENDED:
+                    title += ": Weighted Blended";
+                    break;
+            }
+            title += ", average time: " + String.format("%.2f", (average / 1_000_000)) + " ms";
+            title += ", theoretic fps: " + String.format("%.2f", (1_000 / (average / 1_000_000)));
+            title += ", alpha: " + Resources.opacity + ", geometric passes: " + Resources.numGeoPasses;
+            title += ", maxLayers: " + Resources.numLayers;
+            Resources.glWindow.setTitle(title);
+            times.clear();
+            start = now;
+        }
     }
 
     @Override
@@ -271,7 +381,7 @@ public class Viewer implements GLEventListener {
         {
             glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
             proj.toFb(Resources.matBuffer);
-            
+
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, Mat4.SIZE, Mat4.SIZE, Resources.matBuffer);
         }
@@ -288,7 +398,7 @@ public class Viewer implements GLEventListener {
 
         gl3.glDeleteTextures(Texture.MAX, textureName);
         gl3.glDeleteFramebuffers(1, framebufferName);
-        
+
         oit[currOit].dispose(gl3);
 
         checkError(gl3, "dispose");
@@ -301,7 +411,7 @@ public class Viewer implements GLEventListener {
         int error = gl3.glGetError();
 
         if (error != GL_NO_ERROR) {
-            System.out.println(string + "error " + error);
+            throw new Error("[" + string + "] error: " + error);
         }
     }
 }

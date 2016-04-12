@@ -14,6 +14,7 @@ import glm.vec._3.Vec3;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import oit.InputListener;
+import oit.Resources;
 
 /**
  *
@@ -23,6 +24,8 @@ public class Scene {
 
     private Model model;
     private Mat4[] positions;
+    private Mat4[] opaques;
+    private Mat4[] transparents;
     private float[] opacities;
     private ByteBuffer modelBuffer = GLBuffers.newDirectByteBuffer(glm.mat._4.Mat4.SIZE),
             alphaBuffer = GLBuffers.newDirectByteBuffer(Float.BYTES);
@@ -31,6 +34,12 @@ public class Scene {
 
         model = new Model(gl3);
 
+        opaques = new Mat4[]{
+            new Mat4().translate(new Vec3(-.1f, 0f, 0f))
+        };
+        transparents = new Mat4[]{
+            new Mat4().translate(new Vec3(+.1f, 0f, 0f))
+        };
 //        Mat4 m0 = Mat4.translate(new Vec3(0f, 0f, 0f));
 //        Mat4 m0 = Mat4.translate(new Vec3(.1f, 0f, 0f));
 //        Mat4 m1 = Mat4.translate(new Vec3(-.1f, 0f, 0f));
@@ -52,18 +61,6 @@ public class Scene {
         opacities = new float[]{.6f};
 //        opacities = new float[]{1f, 1f, .5f, .5f};
 //        opacities = new float[]{1f, 1f, .6f, .6f, 1f, 1f, .6f, .6f, 1f, 1f, .6f, .6f};
-    }
-
-    public void render(GL3 gl3, int modelMatrixUL, int alphaUL) {
-
-        for (int i = 0; i < positions.length; i++) {
-
-            gl3.glUniform1f(alphaUL, opacities[i]);
-//            gl3.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFloatArray(), 0);
-            gl3.glUniformMatrix4fv(modelMatrixUL, 1, false, positions[i].toFa_(), 0);
-
-            model.render(gl3);
-        }
     }
 
     public void renderOpaque(GL3 gl3, int modelMatrixUL) {
@@ -95,67 +92,29 @@ public class Scene {
         }
     }
 
-    public void render(GL3 gl3) {
-
-        for (int i = 0; i < positions.length; i++) {
-
-            gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
-            modelBuffer.asFloatBuffer().put(positions[i].toFa_());
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
-
-            gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(0));
-            alphaBuffer.asFloatBuffer().put(opacities[i]);
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
-
-            model.render(gl3);
-        }
-    }
-
     public void renderOpaque(GL3 gl3) {
 
-        for (int i = 0; i < positions.length; i++) {
+        for (Mat4 opaque : opaques) {
 
-            if (opacities[i] == 1) {
+            opaque.toFb(modelBuffer);
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, modelBuffer);
 
-                gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
-//                modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
-                modelBuffer.asFloatBuffer().put(positions[i].toFa_());
-                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
-
-                model.render(gl3);
-            }
+            model.render(gl3);
+            Resources.numGeoPasses++;
         }
     }
 
     public void renderTransparent(GL3 gl3) {
 
-        for (int i = 0; i < positions.length; i++) {
+        for (Mat4 transparent : transparents) {
+            
+            transparent.toFb(modelBuffer);
+            gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, modelBuffer);
 
-            if (opacities[i] < 1) {
-
-//                modelBuffer.asFloatBuffer().put(positions[i].toFloatArray());
-                Mat4 mat = new Mat4()
-//                        .rotate((float) Math.toRadians(InputListener.rot.x), 1, 0, 0)
-//                        .rotate((float) Math.toRadians(InputListener.rot.y), 0, 1, 0)
-//                        .translate(Model.trans[0], Model.trans[1], Model.trans[2])
-//                        .scale(Model.scale)
-                        ;
-                modelBuffer.asFloatBuffer().put(mat.toFa_());
-//                System.out.println("model");
-//                for (int j = 0; j < 16; j++) {
-//                    System.out.println("" + modelBuffer.getFloat());
-//                }
-//                modelBuffer.rewind();
-                gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
-                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, glm.mat._4.Mat4.SIZE, modelBuffer);
-// TODO diff ddp-dp
-//                alphaBuffer.asFloatBuffer().put(opacities[i]);
-//                gl3.glBindBuffer(GL_UNIFORM_BUFFER, DepthPeeling.bufferName.get(Viewer.Buffer.));
-//                gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, alphaBuffer);
-
-                model.render(gl3);
-            }
+            model.render(gl3);
+            Resources.numGeoPasses++;
         }
     }
-
 }

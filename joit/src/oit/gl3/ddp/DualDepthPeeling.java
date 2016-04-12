@@ -10,16 +10,12 @@ import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
-import glm.glm;
-import glm.mat._4.Mat4;
-import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import oit.BufferUtils;
 import oit.Resources;
-import oit.gl3.FullscreenQuad;
 import oit.gl3.OIT;
 import oit.gl3.Scene;
 import oit.gl3.Semantic;
+import oit.gl3.Viewer;
 
 /**
  *
@@ -38,13 +34,6 @@ public class DualDepthPeeling extends OIT {
         public final static int BLEND = 2;
         public final static int FINAL = 3;
         public final static int MAX = 4;
-    }
-
-    private class Buffer {
-
-        public final static int PARAMETERS = 0;
-        public final static int TRANSFORM2 = 1;
-        public final static int MAX = 2;
     }
 
     private class Texture {
@@ -68,44 +57,14 @@ public class DualDepthPeeling extends OIT {
 
     private int[] programName = new int[Program.MAX];
     private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX),
-            framebufferName = GLBuffers.newDirectIntBuffer(Framebuffer.MAX),
-            samplerName = GLBuffers.newDirectIntBuffer(1), queryName = GLBuffers.newDirectIntBuffer(1),
-            samplesCount = GLBuffers.newDirectIntBuffer(1), bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
+            framebufferName = GLBuffers.newDirectIntBuffer(Framebuffer.MAX);
 
     @Override
     public void init(GL3 gl3) {
 
-        clearColor = GLBuffers.newDirectFloatBuffer(4);
-        clearDepth = GLBuffers.newDirectFloatBuffer(1);
-
-        initBuffers(gl3);
-
         initPrograms(gl3);
 
-        initSampler(gl3);
-
         initTargets(gl3);
-
-        gl3.glGenQueries(1, queryName);
-
-        Resources.fullscreenQuad = new FullscreenQuad(gl3);
-
-        clearDepth.put(new float[]{1}).rewind();
-    }
-
-    private void initBuffers(GL3 gl3) {
-
-        gl3.glGenBuffers(Buffer.MAX, bufferName);
-
-        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES, Resources.opacity, GL_DYNAMIC_DRAW);
-        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
-
-        Resources.matBuffer.asFloatBuffer().put(glm.ortho_(0, 1, 0, 1).toFa_());
-
-        gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, Resources.matBuffer, GL_DYNAMIC_DRAW);
-        gl3.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.TRANSFORM2, bufferName.get(Buffer.TRANSFORM2));
     }
 
     private void initPrograms(GL3 gl3) {
@@ -186,16 +145,6 @@ public class DualDepthPeeling extends OIT {
                 Semantic.Sampler.BACK_BLENDER);
     }
 
-    private void initSampler(GL3 gl3) {
-
-        gl3.glGenSamplers(1, samplerName);
-
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        gl3.glSamplerParameteri(samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    }
-
     @Override
     public void render(GL3 gl3, Scene scene) {
 
@@ -213,7 +162,8 @@ public class DualDepthPeeling extends OIT {
          * At most one front color and one back color can be written every pass.
          */
 //        clearColor.put(new float[]{0, 0.1f, 0.5f, 0.9f}).rewind();
-//        gl3.glClearBufferfv(GL_COLOR, 1, new float[]{0, 0.1f, 0.5f, 0.9f}, 0);
+//        clearDepth.put(new float[]{1}).rewind();
+//        gl3.glClearBufferfv(GL_COLOR, 1, clearColor);
 //        gl3.glClearBufferfv(GL_COLOR, 2, clearColor);
         drawBuffers.position(1);
         gl3.glDrawBuffers(2, drawBuffers);
@@ -293,7 +243,7 @@ public class DualDepthPeeling extends OIT {
 
             gl3.glUseProgram(programName[Program.BLEND]);
             bindTextureRect(gl3, textureName.get(Texture.BACK_TEMP0 + currId), Semantic.Sampler.BACK_TEMP, samplerName);
-            Resources.fullscreenQuad.render(gl3);
+            Viewer.fullscreenQuad.render(gl3);
 
             if (Resources.useOQ) {
                 gl3.glEndQuery(GL_SAMPLES_PASSED);
@@ -316,12 +266,11 @@ public class DualDepthPeeling extends OIT {
         bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + currId), Semantic.Sampler.FRONT_BLENDER, samplerName);
         bindTextureRect(gl3, textureName.get(Texture.BACK_BLENDER), Semantic.Sampler.BACK_BLENDER, samplerName);
 
-        Resources.fullscreenQuad.render(gl3);
+        Viewer.fullscreenQuad.render(gl3);
     }
 
     @Override
     public void reshape(GL3 gl3) {
-
         deleteTargets(gl3);
         initTargets(gl3);
     }
@@ -384,7 +333,6 @@ public class DualDepthPeeling extends OIT {
     }
 
     private void deleteTargets(GL3 gl3) {
-
         gl3.glDeleteTextures(Texture.MAX, textureName);
         gl3.glDeleteFramebuffers(Framebuffer.MAX, framebufferName);
     }

@@ -19,7 +19,7 @@ import java.nio.IntBuffer;
  */
 public abstract class OIT {
 
-    protected IntBuffer drawBuffers = GLBuffers.newDirectIntBuffer(new int[]{
+    protected static IntBuffer drawBuffers = GLBuffers.newDirectIntBuffer(new int[]{
         GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT1,
         GL_COLOR_ATTACHMENT2,
@@ -27,7 +27,9 @@ public abstract class OIT {
         GL_COLOR_ATTACHMENT4,
         GL_COLOR_ATTACHMENT5,
         GL_COLOR_ATTACHMENT6}
-    );
+    ),
+            queryName = GLBuffers.newDirectIntBuffer(1), samplerName = GLBuffers.newDirectIntBuffer(1),
+            samplesCount = GLBuffers.newDirectIntBuffer(1);
 //    protected int[] drawBuffers = new int[]{
 //        GL_COLOR_ATTACHMENT0,
 //        GL_COLOR_ATTACHMENT1,
@@ -37,7 +39,8 @@ public abstract class OIT {
 //        GL_COLOR_ATTACHMENT5,
 //        GL_COLOR_ATTACHMENT6};
 
-    protected FloatBuffer clearColor, clearDepth;
+    protected static FloatBuffer clearColor = GLBuffers.newDirectFloatBuffer(4), 
+            clearDepth = GLBuffers.newDirectFloatBuffer(1);
 
     public abstract void init(GL3 gl3);
 

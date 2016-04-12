@@ -33,28 +33,22 @@
 //----------------------------------------------------------------------------------
 
 #version 330
-#extension ARB_draw_buffers : require
 
-uniform float depthScale;
+#include semantic.glsl
 
-layout (location = 0) out vec4 sumColor;
-layout (location = 1) out vec4 sumWeight;
+layout (location = FRAG_COLOR) out vec4 outColor;
 
-vec4 ShadeFragment();
+uniform sampler2DRect weightedSum;
+uniform sampler2DRect transmProduct;
+//uniform vec3 backgroundColor;
 
 void main(void)
 {
-    vec4 color = ShadeFragment();
+    vec3 backgroundColor = vec3(1);
 
-    // Assuming that the projection matrix is a perspective projection
-    // gl_FragCoord.w returns the inverse of the oPos.w register from the vertex shader
-    float viewDepth = abs(1.0 / gl_FragCoord.w);
+    vec4 sumColor = vec4(texture(weightedSum, gl_FragCoord.xy).rgb, texture(transmProduct, gl_FragCoord.xy).r);
+    float transmittance = texture(weightedSum, gl_FragCoord.xy).a;
+    vec3 averageColor = sumColor.rgb / max(sumColor.a, 0.00001);
 
-    // Tuned to work well with FP16 accumulation buffers and 0.001 < linearDepth < 2.5
-    // See Equation (9) from http://jcgt.org/published/0002/02/09/
-    float linearDepth = viewDepth * depthScale;
-    float weight = clamp(0.03 / (1e-5 + pow(linearDepth, 4.0)), 1e-2, 3e3);
-
-    sumColor = vec4(color.rgb * color.a * weight, color.a);
-    sumWeight = vec4(color.a * weight);
+    outColor = vec4(averageColor * (1 - transmittance) + backgroundColor * transmittance, 1.0);
 }

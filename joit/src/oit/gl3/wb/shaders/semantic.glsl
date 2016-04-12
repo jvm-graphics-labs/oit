@@ -4,8 +4,8 @@
 
 // Outputs
 #define FRAG_COLOR      0
-#define SUM_COLORS      0
-#define COUNT           1
+#define SUM_COLOR       0
+#define SUM_WEIGHT      1
 
 precision highp float;
 precision highp int;

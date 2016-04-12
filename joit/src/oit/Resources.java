@@ -14,6 +14,7 @@ import glm.vec._3.Vec3;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import oit.gl3.FullscreenQuad;
+import oit.gl3.OIT;
 
 /**
  *
@@ -37,9 +38,12 @@ public class Resources {
 
     public static GLWindow glWindow;
 
-    public static FloatBuffer opacity = GLBuffers.newDirectFloatBuffer(new float[]{0.6f});
+    public static ByteBuffer parameters = GLBuffers.newDirectByteBuffer(Float.BYTES * 2);
+
+    public static float opacity = 0.6f;
+    public static float weight = 0.5f;
 
     public static ByteBuffer matBuffer = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
-    
-    public static FullscreenQuad fullscreenQuad;
+
+    public static int numLayers = (Resources.numPasses - 1) * 2;
 }

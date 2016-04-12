@@ -5,12 +5,7 @@
  */
 package oit.gl3;
 
-import static com.jogamp.opengl.GL.GL_ARRAY_BUFFER;
-import static com.jogamp.opengl.GL.GL_ELEMENT_ARRAY_BUFFER;
-import static com.jogamp.opengl.GL.GL_FLOAT;
-import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
-import static com.jogamp.opengl.GL.GL_TRIANGLES;
-import static com.jogamp.opengl.GL.GL_UNSIGNED_SHORT;
+import static com.jogamp.opengl.GL.*;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.util.GLBuffers;
 import glm.vec._2.Vec2;
@@ -50,11 +45,11 @@ public class FullscreenQuad {
 
     public FullscreenQuad(GL3 gl3) {
 
-        initBuffer(gl3);
+        initBuffers(gl3);
         initVertexArray(gl3);
     }
 
-    private void initBuffer(GL3 gl3) {
+    private void initBuffers(GL3 gl3) {
 
         gl3.glGenBuffers(Buffer.MAX, bufferName);
 
@@ -69,18 +64,20 @@ public class FullscreenQuad {
 
         gl3.glGenVertexArrays(1, vertexArrayName);
         gl3.glBindVertexArray(vertexArrayName.get(0));
+        {
+            gl3.glBindBuffer(GL_ARRAY_BUFFER, bufferName.get(Buffer.VERTEX));
 
-        gl3.glVertexAttribPointer(Semantic.Attr.POSITION, 2, GL_FLOAT, false, Vec2.SIZE, 0);
-        gl3.glEnableVertexAttribArray(Semantic.Attr.POSITION);
+            gl3.glVertexAttribPointer(Semantic.Attr.POSITION, 2, GL_FLOAT, false, Vec2.SIZE, 0);
 
-        gl3.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+            gl3.glEnableVertexAttribArray(Semantic.Attr.POSITION);
+
+            gl3.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferName.get(Buffer.ELEMENT));
+        }
+        gl3.glBindVertexArray(0);
     }
 
     public void render(GL3 gl3) {
-
         gl3.glBindVertexArray(vertexArrayName.get(0));
-
-        //  Render, passing the vertex number
         gl3.glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, 0);
     }
 }
