@@ -11,8 +11,16 @@ It requires:
 I modified the code through:
 - a general cleaning of unused objects (like `g_dualBackBlenderFboId` inside Dual Depth Peeling)
 - a substitution of Nvidia enums with standard ones (like `GL_FLOAT_RG32_NV` with `GL_RG32F`)
-- specifying the right number of components on server side (like `GL_RGB` with `GL_RG`) and on client side (like `out vec2 outputColor;` instead `out vec4 outputColor;`)
-- specifying always everything, leaving nothing to be padded by the driver (like `outputColor.rgb = frontColor.rgb + opaqueColor * frontColor.a;` with `outputColor = vec4(frontColor.rgb + opaqueColor * frontColor.a, 1);`)
+- specifying the right number of components on server side (like `GL_RGB` with `GL_RG`) and on client side (
+
+      like `out vec2 outputColor;` 
+      
+      instead `out vec4 outputColor;`)
+- specifying always everything, leaving nothing to be padded by the driver (
+
+      like `outputColor.rgb = frontColor.rgb + opaqueColor * frontColor.a;` 
+  
+      with `outputColor = vec4(frontColor.rgb + opaqueColor * frontColor.a, 1);`)
 
 Package [`gl3`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit/gl3) is instead my current `GL3` rewriting, I divided all the different methods of their program in order to make it more readable, as following:
 
