@@ -50,7 +50,7 @@ public abstract class OIT {
 
     public abstract void dispose(GL3 gl3);
 
-    protected void bindTextureRect(GL3 gl3, int textureName, int textureUnit, IntBuffer samplerName) {
+    protected void bindTextRect(GL3 gl3, int textureName, int textureUnit, IntBuffer samplerName) {
 
         gl3.glActiveTexture(GL_TEXTURE0 + textureUnit);
         gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName);

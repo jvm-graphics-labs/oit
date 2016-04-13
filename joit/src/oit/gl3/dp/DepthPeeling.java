@@ -160,7 +160,7 @@ public class DepthPeeling extends OIT {
         gl3.glEnable(GL_DEPTH_TEST);
 
         gl3.glUseProgram(programName[Program.INIT]);
-        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH, samplerName);
+        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH, samplerName);
 
         scene.renderTransparent(gl3);
         /**
@@ -197,8 +197,8 @@ public class DepthPeeling extends OIT {
             }
 
             gl3.glUseProgram(programName[Program.PEEL]);
-            bindTextureRect(gl3, textureName.get(Texture.DEPTH0 + prevId), Semantic.Sampler.DEPTH, samplerName);
-            bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH, samplerName);
+            bindTextRect(gl3, textureName.get(Texture.DEPTH0 + prevId), Semantic.Sampler.DEPTH, samplerName);
+            bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH, samplerName);
 
             scene.renderTransparent(gl3);
 
@@ -216,7 +216,7 @@ public class DepthPeeling extends OIT {
             gl3.glBlendFuncSeparate(GL_DST_ALPHA, GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 
             gl3.glUseProgram(programName[Program.BLEND]);
-            bindTextureRect(gl3, textureName.get(Texture.COLOR0 + currId), Semantic.Sampler.TEMP, samplerName);
+            bindTextRect(gl3, textureName.get(Texture.COLOR0 + currId), Semantic.Sampler.TEMP, samplerName);
 
             Viewer.fullscreenQuad.render(gl3);
 
@@ -237,8 +237,8 @@ public class DepthPeeling extends OIT {
         gl3.glDisable(GL_DEPTH_TEST);
 
         gl3.glUseProgram(programName[Program.FINAL]);
-        bindTextureRect(gl3, textureName.get(Texture.COLOR_BLENDER), Semantic.Sampler.COLOR, samplerName);
-        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR, samplerName);
+        bindTextRect(gl3, textureName.get(Texture.COLOR_BLENDER), Semantic.Sampler.COLOR, samplerName);
+        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR, samplerName);
 
         Viewer.fullscreenQuad.render(gl3);
     }

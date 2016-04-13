@@ -13,18 +13,18 @@
 
 uniform sampler2DRect sumColorTex;
 uniform sampler2DRect countTex;
-//uniform vec3 backgroundColor;
+uniform sampler2DRect opaqueColorTex;
 
 layout (location = FRAG_COLOR) out vec4 outputColor;
 
 void main(void)
 {
-    vec3 backgroundColor = vec3(1);
+    vec3 opaqueColor = texture(opaqueColorTex, gl_FragCoord.xy).rgb;
     vec4 sumColor = texture(sumColorTex, gl_FragCoord.xy);
     float n = texture(countTex, gl_FragCoord.xy).r;
 
     if (n == 0.0) {
-        outputColor.rgb = backgroundColor;
+        outputColor.rgb = opaqueColor;
         return;
     }
 
@@ -32,5 +32,5 @@ void main(void)
     float avgAlpha = sumColor.a / n;
 
     float t = pow(1.0 - avgAlpha, n);
-    outputColor = vec4(avgColor * (1 - t) + backgroundColor * t, 1.0);
+    outputColor = vec4(avgColor * (1 - t) + opaqueColor * t, 1.0);
 }

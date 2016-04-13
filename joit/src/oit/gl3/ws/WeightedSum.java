@@ -75,7 +75,13 @@ public class WeightedSum extends OIT {
                     programName[Program.INIT],
                     gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"),
                     Semantic.Uniform.PARAMETERS);
+
+            gl3.glUseProgram(programName[Program.INIT]);
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.INIT], "opaqueDepthTex"),
+                    Semantic.Sampler.OPAQUE_DEPTH_);
         }
+        
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
                     SHADERS_SRC[Program.FINAL], "vs", null, true);
@@ -99,6 +105,9 @@ public class WeightedSum extends OIT {
             gl3.glUniform1i(
                     gl3.glGetUniformLocation(programName[Program.FINAL], "colorTex"),
                     Semantic.Sampler.SUM_COLOR);
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.FINAL], "opaqueColorTex"),
+                    Semantic.Sampler.OPAQUE_COLOR);
         }
     }
 
@@ -131,6 +140,7 @@ public class WeightedSum extends OIT {
         gl3.glEnable(GL_BLEND);
 
         gl3.glUseProgram(programName[Program.INIT]);
+        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH_, samplerName);
         scene.renderTransparent(gl3);
 
         gl3.glDisable(GL_BLEND);
@@ -141,9 +151,10 @@ public class WeightedSum extends OIT {
         gl3.glDrawBuffer(GL_BACK);
 
         gl3.glUseProgram(programName[Program.FINAL]);
-//            gl3.glUniform3f(finale.getBackgroundColorUL(), 1, 1, 1);
-
-        bindTextureRect(gl3, textureName.get(0), Semantic.Sampler.COLOR, samplerName);
+        
+        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR, samplerName);
+        bindTextRect(gl3, textureName.get(0), Semantic.Sampler.COLOR, samplerName);
+        
         Viewer.fullscreenQuad.render(gl3);
     }
 

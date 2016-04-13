@@ -181,7 +181,7 @@ public class DualDepthPeeling extends OIT {
         gl3.glBlendEquation(GL_MAX);
 
         gl3.glUseProgram(programName[Program.INIT]);
-        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), 0, samplerName);
+        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), 0, samplerName);
         scene.renderTransparent(gl3);
 
         /**
@@ -223,8 +223,8 @@ public class DualDepthPeeling extends OIT {
             gl3.glBlendEquation(GL_MAX);
 
             gl3.glUseProgram(programName[Program.PEEL]);
-            bindTextureRect(gl3, textureName.get(Texture.DEPTH0 + prevId), Semantic.Sampler.DEPTH, samplerName);
-            bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + prevId), Semantic.Sampler.FRONT_BLENDER, 
+            bindTextRect(gl3, textureName.get(Texture.DEPTH0 + prevId), Semantic.Sampler.DEPTH, samplerName);
+            bindTextRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + prevId), Semantic.Sampler.FRONT_BLENDER, 
                     samplerName);
 
             scene.renderTransparent(gl3);
@@ -242,7 +242,7 @@ public class DualDepthPeeling extends OIT {
             }
 
             gl3.glUseProgram(programName[Program.BLEND]);
-            bindTextureRect(gl3, textureName.get(Texture.BACK_TEMP0 + currId), Semantic.Sampler.BACK_TEMP, samplerName);
+            bindTextRect(gl3, textureName.get(Texture.BACK_TEMP0 + currId), Semantic.Sampler.BACK_TEMP, samplerName);
             Viewer.fullscreenQuad.render(gl3);
 
             if (Resources.useOQ) {
@@ -263,8 +263,8 @@ public class DualDepthPeeling extends OIT {
         gl3.glDrawBuffer(GL_BACK);
 
         gl3.glUseProgram(programName[Program.FINAL]);
-        bindTextureRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + currId), Semantic.Sampler.FRONT_BLENDER, samplerName);
-        bindTextureRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_DEPTH_, samplerName);
+        bindTextRect(gl3, textureName.get(Texture.FRONT_BLENDER0 + currId), Semantic.Sampler.FRONT_BLENDER, samplerName);
+        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_DEPTH_, samplerName);
 
         Viewer.fullscreenQuad.render(gl3);
     }

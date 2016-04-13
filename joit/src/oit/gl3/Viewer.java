@@ -175,7 +175,7 @@ public class Viewer implements GLEventListener {
         modelToClip.asFloatBuffer().put(glm.ortho_(0, 1, 0, 1).toFa_());
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, modelToClip, GL_DYNAMIC_DRAW);
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, modelToClip, GL_STATIC_DRAW);
 
         BufferUtils.destroyDirectBuffer(modelToClip);
 
@@ -267,11 +267,12 @@ public class Viewer implements GLEventListener {
         oit[Oit.WEIGHTED_AVERAGE] = new WeightedAverage();
         oit[Oit.WEIGHTED_SUM] = new WeightedSum();
         oit[Oit.WEIGHTED_BLENDED] = new WeightedBlended();
-        for (int i = 0; i < Oit.MAX; i++) {
-            oit[i].init(gl3);
-        }
+//        for (int i = 0; i < Oit.MAX; i++) {
+//            oit[i].init(gl3);
+//        }
         newOit = Oit.DUAL_DEPTH_PEELING;
         currOit = newOit;
+        oit[currOit].init(gl3);
     }
 
     @Override
@@ -292,10 +293,10 @@ public class Viewer implements GLEventListener {
         }
         {
             Resources.parameters.putFloat(0 * Float.BYTES, Resources.opacity);
-            Resources.parameters.putFloat(1 * Float.BYTES, Resources.weight);
+            Resources.parameters.putFloat(1 * Float.BYTES, Resources.weight).rewind();
 
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES, Resources.parameters);
+            gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES * 2, Resources.parameters);
         }
 
         if (newOit != currOit) {

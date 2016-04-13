@@ -12,14 +12,14 @@
 #include semantic.glsl
 
 uniform sampler2DRect colorTex;
-//uniform vec3 backgroundColor;
+uniform sampler2DRect opaqueColorTex;
 
 layout (location = FRAG_COLOR) out vec4 outputColor;
 
 // Sum(A_i * C_i) + C_bg * (1 - Sum(A_i))
 void main(void)
 {
-    vec3 backgroundColor = vec3(1);
+    vec3 opaqueColor = texture(opaqueColorTex, gl_FragCoord.xy).rgb;;
     vec4 s = texture(colorTex, gl_FragCoord.xy);
-    outputColor = vec4(s.rgb + backgroundColor * (1.0 - s.a), 1.0);
+    outputColor = vec4(s.rgb + opaqueColor * (1.0 - s.a), 1.0);
 }

@@ -13,14 +13,22 @@
 
 #include semantic.glsl
 
-layout (location = SUM_COLORS) out vec4 accumulationTex0;
-layout (location = COUNT) out float accumulationTex1;
+uniform sampler2DRect opaqueDepthTex;
+
+layout (location = SUM_COLORS) out vec4 sumColors;
+layout (location = COUNT) out float count;
 
 vec4 shadeFragment();
 
 void main(void)
 {
+    float opaqueDepth = texture(opaqueDepthTex, gl_FragCoord.xy).r;
+
+    if (gl_FragCoord.z > opaqueDepth) {
+        discard;
+    }
+
     vec4 color = shadeFragment();
-    accumulationTex0 = vec4(color.rgb * color.a, color.a);
-    accumulationTex1 = 1;
+    sumColors = vec4(color.rgb * color.a, color.a);
+    count = 1;
 }

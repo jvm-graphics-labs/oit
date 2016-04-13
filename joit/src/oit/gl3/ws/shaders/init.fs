@@ -11,12 +11,20 @@
 
 #include semantic.glsl
 
+uniform sampler2DRect opaqueDepthTex;
+
 layout (location = FRAG_COLOR) out vec4 outputColor;
 
 vec4 shadeFragment();
 
 void main(void)
 {
+    float opaqueDepth = texture(opaqueDepthTex, gl_FragCoord.xy).r;
+
+    if (gl_FragCoord.z > opaqueDepth) {
+        discard;
+    }
+
     vec4 color = shadeFragment();
     outputColor = vec4(color.rgb * color.a, color.a);
 }

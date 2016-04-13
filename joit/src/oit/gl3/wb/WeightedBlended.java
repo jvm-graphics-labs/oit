@@ -11,17 +11,11 @@ import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import java.nio.IntBuffer;
-import jglm.Jglm;
-import jglm.Mat4;
-import jglm.Vec2i;
 import oit.Resources;
 import oit.gl3.OIT;
 import oit.gl3.Scene;
 import oit.gl3.Semantic;
 import oit.gl3.Viewer;
-import oit.gl3.ddp.DualDepthPeeling;
-import oit.gl3.wb.glsl.Final;
-import oit.gl3.wb.glsl.Init;
 
 /**
  *
@@ -83,7 +77,7 @@ public class WeightedBlended extends OIT {
                     programName[Program.INIT],
                     gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform1"),
                     Semantic.Uniform.TRANSFORM1);
-
+            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"));
             gl3.glUniformBlockBinding(
                     programName[Program.INIT],
                     gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"),
@@ -105,12 +99,13 @@ public class WeightedBlended extends OIT {
             programName[Program.FINAL] = shaderProgram.program();
 
             gl3.glUniformBlockBinding(
-                    programName[Program.INIT],
-                    gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform2"),
+                    programName[Program.FINAL],
+                    gl3.glGetUniformBlockIndex(programName[Program.FINAL], "Transform2"),
                     Semantic.Uniform.TRANSFORM2);
 
             gl3.glUseProgram(programName[Program.FINAL]);
-            gl3.glUniform1i(gl3.glGetUniformLocation(programName[Program.FINAL], "weightedSum"),
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.FINAL], "weightedSum"),
                     Semantic.Sampler.WEIGHTED_SUM);
             gl3.glUniform1i(
                     gl3.glGetUniformLocation(programName[Program.FINAL], "transmProduct"),
@@ -153,8 +148,8 @@ public class WeightedBlended extends OIT {
 
         gl3.glUseProgram(programName[Program.FINAL]);
 
-        bindTextureRect(gl3, textureName.get(Texture.WEIGHTED_SUM), Semantic.Sampler.WEIGHTED_SUM, samplerName);
-        bindTextureRect(gl3, textureName.get(Texture.TRANSM_PRODUCT), Semantic.Sampler.TRANSM_PRODUCT, samplerName);
+        bindTextRect(gl3, textureName.get(Texture.WEIGHTED_SUM), Semantic.Sampler.WEIGHTED_SUM, samplerName);
+        bindTextRect(gl3, textureName.get(Texture.TRANSM_PRODUCT), Semantic.Sampler.TRANSM_PRODUCT, samplerName);
 
         Viewer.fullscreenQuad.render(gl3);
     }
