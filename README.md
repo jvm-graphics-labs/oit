@@ -21,6 +21,8 @@ I modified the code through:
       like `outputColor.rgb = frontColor.rgb + opaqueColor * frontColor.a;` 
   
       with `outputColor = vec4(frontColor.rgb + opaqueColor * frontColor.a, 1);`)
+- implementation of the OIT methods over plain opaque geometry rendered normally
+- improving of dual depth peeling and depth peeling algorithms by performing the occulsion query also at the init stage in order to save potentially an additional geometric pass.
 
 Package [`gl3`](https://github.com/elect86/depthPeeling/tree/master/DepthPeeling/src/oit/gl3) is instead my current `GL3` rewriting, I divided all the different methods of their program in order to make it more readable, as following:
 
