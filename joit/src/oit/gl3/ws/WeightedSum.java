@@ -11,9 +11,9 @@ import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import java.nio.IntBuffer;
-import oit.Resources;
+import oit.framework.Resources;
 import oit.gl3.OIT;
-import oit.gl3.Scene;
+import oit.framework.Scene;
 import oit.gl3.Semantic;
 import oit.gl3.Viewer;
 
@@ -49,9 +49,9 @@ public class WeightedSum extends OIT {
 
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vs", null, null, null, true);;
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vert", null, null, null, true);;
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "frag", null, null, null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -79,14 +79,14 @@ public class WeightedSum extends OIT {
             gl3.glUseProgram(programName[Program.INIT]);
             gl3.glUniform1i(
                     gl3.glGetUniformLocation(programName[Program.INIT], "opaqueDepthTex"),
-                    Semantic.Sampler.OPAQUE_DEPTH_);
+                    Semantic.Sampler.OPAQUE_DEPTH);
         }
         
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "vs", null, true);
+                    SHADERS_SRC[Program.FINAL], "vert", null, true);
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "fs", null, true);
+                    SHADERS_SRC[Program.FINAL], "frag", null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -140,7 +140,7 @@ public class WeightedSum extends OIT {
         gl3.glEnable(GL_BLEND);
 
         gl3.glUseProgram(programName[Program.INIT]);
-        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH_, samplerName);
+        bindRectTex(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH);
         scene.renderTransparent(gl3);
 
         gl3.glDisable(GL_BLEND);
@@ -152,8 +152,8 @@ public class WeightedSum extends OIT {
 
         gl3.glUseProgram(programName[Program.FINAL]);
         
-        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR, samplerName);
-        bindTextRect(gl3, textureName.get(0), Semantic.Sampler.COLOR, samplerName);
+        bindRectTex(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR);
+        bindRectTex(gl3, textureName.get(0), Semantic.Sampler.COLOR);
         
         Viewer.fullscreenQuad.render(gl3);
     }

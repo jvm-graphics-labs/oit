@@ -4,6 +4,7 @@
  */
 package oit.gl3;
 
+import oit.framework.Scene;
 import oit.gl3.dp.DepthPeeling;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.NewtFactory;
@@ -25,15 +26,14 @@ import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jglm.Jglm;
-import oit.BufferUtils;
-import oit.InputListener;
-import oit.Resources;
+import oit.framework.BufferUtils;
+import oit.framework.InputListener;
+import oit.framework.Model;
+import oit.framework.Resources;
 import oit.gl3.ddp.DualDepthPeeling;
 import oit.gl3.wa.WeightedAverage;
 import oit.gl3.wb.WeightedBlended;
@@ -45,7 +45,6 @@ import oit.gl3.ws.WeightedSum;
  */
 public class Viewer implements GLEventListener {
 
-    public static final String MODEL = "/data/dragon.obj";
     public static final String SHADERS_ROOT = "/oit/gl3/shaders/";
     public static final String[] SHADERS_SRC = new String[]{"opaque", "shade"};
     public static final String TITLE = "OIT";
@@ -118,7 +117,7 @@ public class Viewer implements GLEventListener {
     private Scene scene;
     private IntBuffer framebufferName = GLBuffers.newDirectIntBuffer(1), queryName = GLBuffers.newDirectIntBuffer(1),
             timeBuffer = GLBuffers.newDirectIntBuffer(1);
-    private Mat4 view = new Mat4(), proj = new Mat4();
+    private Mat4 view = new Mat4(), proj = new Mat4(), projView = new Mat4();
     private int programName, currOit;
     private long start;
     private ArrayList<Integer> times = new ArrayList<>();
@@ -128,10 +127,10 @@ public class Viewer implements GLEventListener {
 
         GL3 gl3 = glad.getGL().getGL3();
 
-        System.out.println("setSwapInterval(0): " + GLContext.getCurrent().setSwapInterval(0));
-
+        gl3.setSwapInterval(0);
+        
         try {
-            scene = new Scene(gl3);
+            scene = new Scene(gl3, new ModelGL3(gl3));
         } catch (IOException ex) {
             Logger.getLogger(Viewer.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -153,6 +152,8 @@ public class Viewer implements GLEventListener {
         fullscreenQuad = new FullscreenQuad(gl3);
         gl3.glGenQueries(1, OIT.queryName);
 
+        printInfo();
+
         start = System.currentTimeMillis();
 
         checkError(gl3, "init");
@@ -163,7 +164,7 @@ public class Viewer implements GLEventListener {
         gl3.glGenBuffers(Buffer.MAX, bufferName);
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
-        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE * 2, null, GL_DYNAMIC_DRAW);
+        gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, null, GL_DYNAMIC_DRAW);
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM1));
         gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, null, GL_DYNAMIC_DRAW);
@@ -213,7 +214,7 @@ public class Viewer implements GLEventListener {
         gl3.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,
                 textureName.get(Texture.COLOR), 0);
     }
-    
+
     private void deleteTargets(GL3 gl3) {
         gl3.glDeleteTextures(Texture.MAX, textureName);
         gl3.glDeleteFramebuffers(1, framebufferName);
@@ -222,9 +223,9 @@ public class Viewer implements GLEventListener {
     private void initPrograms(GL3 gl3) {
 
         ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT, SHADERS_SRC,
-                "vs", null, null, null, true);
+                "vert", null, null, null, true);
         ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT, SHADERS_SRC,
-                "fs", null, null, null, true);
+                "frag", null, null, null, true);
 
         ShaderProgram shaderProgram = new ShaderProgram();
         shaderProgram.add(vertShader);
@@ -267,12 +268,25 @@ public class Viewer implements GLEventListener {
         oit[Oit.WEIGHTED_AVERAGE] = new WeightedAverage();
         oit[Oit.WEIGHTED_SUM] = new WeightedSum();
         oit[Oit.WEIGHTED_BLENDED] = new WeightedBlended();
-//        for (int i = 0; i < Oit.MAX; i++) {
-//            oit[i].init(gl3);
-//        }
+
         newOit = Oit.DUAL_DEPTH_PEELING;
         currOit = newOit;
         oit[currOit].init(gl3);
+    }
+
+    private void printInfo() {
+        System.out.println("GL3 Order Independent Transparency comparison sample");
+        System.out.println("Commands");
+        System.out.println("A/D\t\t- Change uniform opacity");
+        System.out.println("W/S\t\t- Change uniform weight (only for WB)");
+        System.out.println(" 1\t\t- Dual Depth Peeling");
+        System.out.println(" 2\t\t- Depth Peeling");
+        System.out.println(" 3\t\t- Weighted Average");
+        System.out.println(" 4\t\t- Weighted Sum");
+        System.out.println(" 5\t\t- Weighted Blended");
+        System.out.println(" B\t\t- Toggle background color (black/white)");
+        System.out.println(" O\t\t- Toggle occlusion queries (only for DDP and DP)");
+        System.out.println("left/right\t- Change number of max passes (only for DDP and DP)");
     }
 
     @Override
@@ -286,14 +300,14 @@ public class Viewer implements GLEventListener {
                     .rotate((float) Math.toRadians(InputListener.rot.y), 0, 1, 0)
                     .translate(Model.trans[0], Model.trans[1], Model.trans[2])
                     .scale(Model.scale);
-            view.toFb(Resources.matBuffer);
+            proj.mul(view, projView).toFb(Resources.matBuffer);
 
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, Resources.matBuffer);
         }
         {
             Resources.parameters.putFloat(0 * Float.BYTES, Resources.opacity);
-            Resources.parameters.putFloat(1 * Float.BYTES, Resources.weight).rewind();
+            Resources.parameters.putFloat(1 * Float.BYTES, Resources.weight);
 
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.PARAMETERS));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Float.BYTES * 2, Resources.parameters);
@@ -308,7 +322,7 @@ public class Viewer implements GLEventListener {
         Resources.numGeoPasses = 0;
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
-        OIT.clearColor.put(new float[]{1, 1, 1, 1}).rewind();
+        OIT.clearColor.put(Resources.backgroundColor.toFA_()).rewind();
         OIT.clearDepth.put(new float[]{1}).rewind();
         gl3.glClearBufferfv(GL_COLOR, 0, OIT.clearColor);
         gl3.glClearBufferfv(GL_DEPTH, 0, OIT.clearDepth);
@@ -346,27 +360,28 @@ public class Viewer implements GLEventListener {
                 average += time;
             }
             average /= times.size();
-            String title = TITLE;
+            String title = TITLE + ", mode: ";
             switch (currOit) {
                 case Oit.DEPTH_PEELING:
-                    title += ": Depth Peeling";
+                    title += "DP";
                     break;
                 case Oit.DUAL_DEPTH_PEELING:
-                    title += ": Dual Depth Peeling";
+                    title += "DDP";
                     break;
                 case Oit.WEIGHTED_AVERAGE:
-                    title += ": Weighted Average";
+                    title += "WA";
                     break;
                 case Oit.WEIGHTED_SUM:
-                    title += ": Weighted Sum";
+                    title += "WS";
                     break;
                 case Oit.WEIGHTED_BLENDED:
-                    title += ": Weighted Blended";
+                    title += "WB";
                     break;
             }
-            title += ", average time: " + String.format("%.2f", (average / 1_000_000)) + " ms";
-            title += ", theoretic fps: " + String.format("%.2f", (1_000 / (average / 1_000_000)));
-            title += ", alpha: " + Resources.opacity + ", geometric passes: " + Resources.numGeoPasses;
+            title += ", oit time: " + String.format("%.2f", (average / 1_000_000)) + " ms";
+            title += ", oit theor. fps: " + String.format("%.2f", (1_000 / (average / 1_000_000)));
+            title += ", alpha: " + String.format("%.2f", Resources.opacity);
+            title += ", geom. passes: " + Resources.numGeoPasses;
             switch (currOit) {
                 case Oit.DEPTH_PEELING:
                 case Oit.DUAL_DEPTH_PEELING:
@@ -375,7 +390,7 @@ public class Viewer implements GLEventListener {
                 case Oit.WEIGHTED_AVERAGE:
                 case Oit.WEIGHTED_SUM:
                 case Oit.WEIGHTED_BLENDED:
-                    title += ", weigth parameter: " + Resources.weight;
+                    title += ", weigth parameter: " + String.format("%.2f", Resources.weight);
                     break;
             }
             Resources.glWindow.setTitle(title);
@@ -391,7 +406,7 @@ public class Viewer implements GLEventListener {
         GL3 gl3 = glad.getGL().getGL3();
 
         Resources.imageSize.set(width, height);
-        
+
         deleteTargets(gl3);
         initTargets(gl3);
 
@@ -400,9 +415,6 @@ public class Viewer implements GLEventListener {
         {
             glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
             proj.toFb(Resources.matBuffer);
-
-            gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
-            gl3.glBufferSubData(GL_UNIFORM_BUFFER, Mat4.SIZE, Mat4.SIZE, Resources.matBuffer);
         }
 
         gl3.glViewport(0, 0, width, height);

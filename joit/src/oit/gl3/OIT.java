@@ -5,6 +5,7 @@
  */
 package oit.gl3;
 
+import oit.framework.Scene;
 import static com.jogamp.opengl.GL.GL_TEXTURE0;
 import static com.jogamp.opengl.GL2ES2.*;
 import static com.jogamp.opengl.GL2GL3.GL_TEXTURE_RECTANGLE;
@@ -50,7 +51,7 @@ public abstract class OIT {
 
     public abstract void dispose(GL3 gl3);
 
-    protected void bindTextRect(GL3 gl3, int textureName, int textureUnit, IntBuffer samplerName) {
+    protected void bindRectTex(GL3 gl3, int textureName, int textureUnit) {
 
         gl3.glActiveTexture(GL_TEXTURE0 + textureUnit);
         gl3.glBindTexture(GL_TEXTURE_RECTANGLE, textureName);

@@ -11,9 +11,9 @@ import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import java.nio.IntBuffer;
-import oit.Resources;
+import oit.framework.Resources;
 import oit.gl3.OIT;
-import oit.gl3.Scene;
+import oit.framework.Scene;
 import oit.gl3.Semantic;
 import oit.gl3.Viewer;
 
@@ -55,9 +55,9 @@ public class WeightedAverage extends OIT {
     private void initPrograms(GL3 gl3) {
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vs", null, null, null, true);;
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vert", null, null, null, true);;
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "frag", null, null, null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -85,13 +85,13 @@ public class WeightedAverage extends OIT {
         gl3.glUseProgram(programName[Program.INIT]);
         gl3.glUniform1i(
                 gl3.glGetUniformLocation(programName[Program.INIT], "opaqueDepthTex"), 
-                Semantic.Sampler.OPAQUE_DEPTH_);
+                Semantic.Sampler.OPAQUE_DEPTH);
         
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "vs", null, true);
+                    SHADERS_SRC[Program.FINAL], "vert", null, true);
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "fs", null, true);
+                    SHADERS_SRC[Program.FINAL], "frag", null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -115,7 +115,7 @@ public class WeightedAverage extends OIT {
                     Semantic.Sampler.COUNT);
             gl3.glUniform1i(
                     gl3.glGetUniformLocation(programName[Program.FINAL], "opaqueColorTex"),
-                    2);
+                    Semantic.Sampler.OPAQUE_COLOR);
         }
 
     }
@@ -169,7 +169,7 @@ public class WeightedAverage extends OIT {
         gl3.glEnable(GL_BLEND);
 
         gl3.glUseProgram(programName[Program.INIT]);
-        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH_, samplerName);
+        bindRectTex(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH);
         scene.renderTransparent(gl3);
 
         gl3.glDisable(GL_BLEND);
@@ -180,9 +180,9 @@ public class WeightedAverage extends OIT {
         gl3.glDrawBuffer(GL_BACK);
 
         gl3.glUseProgram(programName[Program.FINAL]);
-        bindTextRect(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), 2, samplerName);
-        bindTextRect(gl3, textureName.get(Texture.SUM_COLOR), Semantic.Sampler.SUM_COLOR, samplerName);
-        bindTextRect(gl3, textureName.get(Texture.COUNT), Semantic.Sampler.COUNT, samplerName);
+        bindRectTex(gl3, textureName.get(Texture.SUM_COLOR), Semantic.Sampler.SUM_COLOR);
+        bindRectTex(gl3, textureName.get(Texture.COUNT), Semantic.Sampler.COUNT);
+        bindRectTex(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR);
         Viewer.fullscreenQuad.render(gl3);
     }
 

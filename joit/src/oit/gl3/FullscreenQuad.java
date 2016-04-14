@@ -78,6 +78,9 @@ public class FullscreenQuad {
 
     public void render(GL3 gl3) {
         gl3.glBindVertexArray(vertexArrayName.get(0));
-        gl3.glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, 0);
+        {
+            gl3.glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, 0);
+        }
+        gl3.glBindVertexArray(0);
     }
 }

@@ -11,9 +11,9 @@ import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import java.nio.IntBuffer;
-import oit.Resources;
+import oit.framework.Resources;
 import oit.gl3.OIT;
-import oit.gl3.Scene;
+import oit.framework.Scene;
 import oit.gl3.Semantic;
 import oit.gl3.Viewer;
 
@@ -56,9 +56,16 @@ public class WeightedBlended extends OIT {
 
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vs", null, null, null, true);
-            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vert", null, null, null, false);
+            /**
+             * Since definind same ubo in different shaders of the same program does not work, let's use a trick:
+             * let's include it with '#include' and let's create then just one shader.
+             * http://forum.jogamp.org/Sharing-the-same-ubo-among-different-shaders-of-the-same-program-td4036597.html
+             */
+//            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
+//                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
+            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
+                    SHADERS_SRC[Program.INIT], "frag", null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -77,18 +84,23 @@ public class WeightedBlended extends OIT {
                     programName[Program.INIT],
                     gl3.glGetUniformBlockIndex(programName[Program.INIT], "Transform1"),
                     Semantic.Uniform.TRANSFORM1);
-            System.out.println(""+gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"));
+
             gl3.glUniformBlockBinding(
                     programName[Program.INIT],
                     gl3.glGetUniformBlockIndex(programName[Program.INIT], "Parameters"),
                     Semantic.Uniform.PARAMETERS);
+            
+            gl3.glUseProgram(programName[Program.INIT]);
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.INIT], "opaqueDepthTex"),
+                    Semantic.Sampler.OPAQUE_DEPTH);
         }
 
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "vs", null, true);
+                    SHADERS_SRC[Program.FINAL], "vert", null, true);
             ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.FINAL], "fs", null, true);
+                    SHADERS_SRC[Program.FINAL], "frag", null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);
@@ -110,6 +122,9 @@ public class WeightedBlended extends OIT {
             gl3.glUniform1i(
                     gl3.glGetUniformLocation(programName[Program.FINAL], "transmProduct"),
                     Semantic.Sampler.TRANSM_PRODUCT);
+            gl3.glUniform1i(
+                    gl3.glGetUniformLocation(programName[Program.FINAL], "opaqueColorTex"),
+                    Semantic.Sampler.OPAQUE_COLOR);
         }
     }
 
@@ -137,6 +152,7 @@ public class WeightedBlended extends OIT {
         gl3.glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 
         gl3.glUseProgram(programName[Program.INIT]);
+        bindRectTex(gl3, Viewer.textureName.get(Viewer.Texture.DEPTH), Semantic.Sampler.OPAQUE_DEPTH);
         scene.renderTransparent(gl3);
 
         gl3.glDisable(GL_BLEND);
@@ -148,8 +164,9 @@ public class WeightedBlended extends OIT {
 
         gl3.glUseProgram(programName[Program.FINAL]);
 
-        bindTextRect(gl3, textureName.get(Texture.WEIGHTED_SUM), Semantic.Sampler.WEIGHTED_SUM, samplerName);
-        bindTextRect(gl3, textureName.get(Texture.TRANSM_PRODUCT), Semantic.Sampler.TRANSM_PRODUCT, samplerName);
+        bindRectTex(gl3, textureName.get(Texture.WEIGHTED_SUM), Semantic.Sampler.WEIGHTED_SUM);
+        bindRectTex(gl3, textureName.get(Texture.TRANSM_PRODUCT), Semantic.Sampler.TRANSM_PRODUCT);
+        bindRectTex(gl3, Viewer.textureName.get(Viewer.Texture.COLOR), Semantic.Sampler.OPAQUE_COLOR);
 
         Viewer.fullscreenQuad.render(gl3);
     }

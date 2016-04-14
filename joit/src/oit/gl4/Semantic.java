@@ -3,9 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package oit.gl3;
-
-import oit.gl4.*;
+package oit.gl4;
 
 /**
  *
@@ -63,26 +61,18 @@ public class Semantic {
 
     public static class Sampler {
 
-        public static final int OPAQUE_DEPTH = 2;
+        public static final int DIFFUSE = 0;
+        public static final int TEXTURE0 = 0;
+        public static final int SUM_COLOR = 1;
+        public static final int SUM_WEIGHT = 2;
+        public static final int OPAQUE_DEPTH = 0;
         public static final int OPAQUE_COLOR = 3;
-        public static final int DEPTH = 0;
-        public static final int TEMP = 0;
-        public static final int COLOR = 0;
-        /**
-         * Dual Depth Peeling.
-         */
-        public static final int FRONT_BLENDER = 1;
-        public static final int BACK_TEMP = 0;
-        /**
-         * Weighted Average.
-         */
-        public static final int SUM_COLOR = 0;
-        public static final int COUNT = 1;
-        /**
-         * Weighted Blended.
-         */
-        public static final int WEIGHTED_SUM = 0;
-        public static final int TRANSM_PRODUCT = 1;
+        public static final int POSITION = 4;
+        public static final int TEXCOORD = 5;
+        public static final int COLOR = 6;
+        
+        public static final int ABUFFER = 0;
+        public static final int ABUFFER_COUNTER = 1;
     }
 
     public static class Storage {
