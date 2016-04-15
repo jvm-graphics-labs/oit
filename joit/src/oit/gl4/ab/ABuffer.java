@@ -7,12 +7,15 @@ package oit.gl4.ab;
 
 import static com.jogamp.opengl.GL2ES3.*;
 import com.jogamp.opengl.GL4;
+import static com.jogamp.opengl.GL4.GL_DYNAMIC_STORAGE_BIT;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import glm.vec._4.Vec4;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import oit.framework.Resources;
+import oit.gl4.OIT;
 import oit.gl4.Scene;
 import oit.gl4.Semantic;
 
@@ -27,11 +30,11 @@ public class ABuffer {
     private static final String[] FS_SRC = new String[]{"render", "display", "clear"};
     private static final int ABUFFER_SIZE = 16;
 
-    private final boolean useABuffer = false;
-    private final boolean abufferUseSorting = true;
-    private final boolean resolveAlphaCorrection = true;
-    private final boolean resolveGelly = false;
-    private final boolean abufferUseTextures = true;
+    private static final boolean useABuffer = false;
+    private static final boolean useSorting = true;
+    private static final boolean resolveAlphaCorrection = false;
+    private static final boolean resolveGelly = false;
+    private static final boolean useTextures = true;
 
     private class Program {
 
@@ -48,14 +51,42 @@ public class ABuffer {
         public static final int MAX = 2;
     }
 
+    private static class Parameters {
+
+        public static final int SIZE = 8 * Integer.BYTES + Vec4.SIZE;
+        private static ByteBuffer buffer = GLBuffers.newDirectByteBuffer(SIZE);
+
+        public static ByteBuffer getBuffer() {
+            buffer
+                    .putInt(Resources.imageSize.x).putInt(Resources.imageSize.y)
+                    .putInt(useABuffer ? 1 : 0)
+                    .putInt(ABUFFER_SIZE)
+                    .putInt(useTextures ? 1 : 0)
+                    .putInt(resolveGelly ? 1 : 0)
+                    .putInt(useSorting ? 1 : 0)
+                    .putInt(resolveAlphaCorrection ? 1 : 0)
+                    .putFloat(Resources.backgroundColor.x).putFloat(Resources.backgroundColor.y)
+                    .putFloat(Resources.backgroundColor.z).putFloat(0f)
+                    .rewind();
+
+            return buffer;
+        }
+    }
+
     private int[] programName = new int[Program.MAX];
-    private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX);
-    private Vec4 backgroundColor = new Vec4(1.0f);
+    private IntBuffer textureName = GLBuffers.newDirectIntBuffer(Texture.MAX),
+            bufferName = GLBuffers.newDirectIntBuffer(1), framebufferName = GLBuffers.newDirectIntBuffer(1);
     private FullscreenQuad fullscreenQuad;
+    /**
+     * https://jogamp.org/bugzilla/show_bug.cgi?id=1287
+     */
+    private boolean bug1287 = true;
 
     public ABuffer(GL4 gl4) {
 
         initPrograms(gl4);
+
+        initBuffer(gl4);
 
         initTargets(gl4);
 
@@ -87,6 +118,23 @@ public class ABuffer {
         }
     }
 
+    private void initBuffer(GL4 gl4) {
+
+        gl4.glCreateBuffers(1, bufferName);
+
+        if (!bug1287) {
+
+            gl4.glNamedBufferStorage(bufferName.get(0), Parameters.SIZE, Parameters.getBuffer(), GL_DYNAMIC_STORAGE_BIT);
+
+        } else {
+
+            gl4.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(0));
+            gl4.glBufferStorage(GL_UNIFORM_BUFFER, Parameters.SIZE, null, GL_DYNAMIC_STORAGE_BIT);
+        }
+
+        gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(0));
+    }
+
     /**
      * Initialize A-Buffer storage. It is composed of a fragment buffer with
      * ABUFFER_SIZE layers and a "counter" buffer used to maintain the number
@@ -96,7 +144,7 @@ public class ABuffer {
      */
     private void initTargets(GL4 gl4) {
 
-        if (abufferUseTextures) {
+        if (useTextures) {
 
             textureName.position(Texture.ABUFFER);
             gl4.glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, textureName);
@@ -107,21 +155,32 @@ public class ABuffer {
             gl4.glTextureParameteri(textureName.get(Texture.ABUFFER), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             gl4.glTextureParameteri(textureName.get(Texture.ABUFFER), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-            gl4.glTextureStorage3D(textureName.get(Texture.ABUFFER), 1, GL_RGBA32F, Resources.imageSize.x,
-                    Resources.imageSize.y, ABUFFER_SIZE);
+//            gl4.glTextureStorage3D(textureName.get(Texture.ABUFFER), 1, GL_RGBA32F, Resources.imageSize.x,
+//                    Resources.imageSize.y, ABUFFER_SIZE);
+            gl4.glBindTexture(GL_TEXTURE_2D_ARRAY, textureName.get(Texture.ABUFFER));
+            gl4.glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA32F, Resources.imageSize.x, Resources.imageSize.y,
+                    ABUFFER_SIZE, 0, GL_RGBA, GL_FLOAT, null);
 
             gl4.glBindImageTexture(Semantic.Sampler.ABUFFER, textureName.get(Texture.ABUFFER), 0, true, 0, GL_READ_WRITE,
                     GL_RGBA32F);
+            gl4.glBindSampler(Semantic.Sampler.ABUFFER, OIT.samplerName.get(0));
 
             gl4.glTextureParameteri(textureName.get(Texture.ABUFFER_COUNTER), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             gl4.glTextureParameteri(textureName.get(Texture.ABUFFER_COUNTER), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-//            gl4.glTextureStorage2D(textureName.get(Texture.ABUFFER_COUNTER), 1, GL_R32F, Resources.imageSize.x,
-            gl4.glTextureStorage2D(textureName.get(Texture.ABUFFER_COUNTER), 1, GL_R32UI, Resources.imageSize.x,
-                    Resources.imageSize.y);
+//            gl4.glTextureStorage2D(textureName.get(Texture.ABUFFER_COUNTER), 1, GL_R32UI, Resources.imageSize.x,
+//                    Resources.imageSize.y);
+            gl4.glBindTexture(GL_TEXTURE_2D, textureName.get(Texture.ABUFFER_COUNTER));
+            gl4.glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, Resources.imageSize.x, Resources.imageSize.y, 0, GL_RED,
+                    GL_FLOAT, null);
 
             gl4.glBindImageTexture(Semantic.Sampler.ABUFFER_COUNTER, textureName.get(Texture.ABUFFER_COUNTER), 0, false,
                     0, GL_READ_WRITE, GL_R32UI);
+            gl4.glBindSampler(Semantic.Sampler.ABUFFER_COUNTER, OIT.samplerName.get(0));
+
+            gl4.glCreateFramebuffers(1, framebufferName);
+            gl4.glNamedFramebufferTextureLayer(framebufferName.get(0), GL_COLOR_ATTACHMENT0,
+                    textureName.get(Texture.ABUFFER), 0, 0);
 
         } else {
 
@@ -135,14 +194,20 @@ public class ABuffer {
 
     public void render(GL4 gl4, Scene scene) {
 
-        gl4.glColorMask(true, true, true, true);
-        gl4.glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
-        gl4.glClear(GL_COLOR_BUFFER_BIT);
+        {
+            gl4.glNamedBufferSubData(bufferName.get(0), 0, Parameters.SIZE, Parameters.getBuffer());
+        }
+
+        gl4.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, Resources.backgroundColor.x)
+                .put(1, Resources.backgroundColor.y).put(2, Resources.backgroundColor.z).put(3, 1));
+        gl4.glClearBufferfv(GL_DEPTH, 0, Resources.clearDepth.put(0, 1));
+
+        gl4.glEnable(GL_DEPTH_TEST);
 
         // Clear A-Buffer
         if (useABuffer) {
 
-            if (!abufferUseTextures) {
+            if (!useTextures) {
                 // TODO
             }
             gl4.glUseProgram(programName[Program.CLEAR]);

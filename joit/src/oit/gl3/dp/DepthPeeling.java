@@ -154,10 +154,8 @@ public class DepthPeeling extends OIT {
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer.COLOR_BLENDER));
         gl3.glDrawBuffer(drawBuffers.get(0));
 
-        clearColor.put(new float[]{0, 0, 0, 1}).rewind();
-        clearDepth.put(new float[]{1}).rewind();
-        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
-        gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
+        gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, 0).put(1, 0).put(2, 0).put(3, 1));
+        gl3.glClearBufferfv(GL_DEPTH, 0, Resources.clearDepth.put(0, 1));
 
         gl3.glEnable(GL_DEPTH_TEST);
 
@@ -201,9 +199,8 @@ public class DepthPeeling extends OIT {
                 gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(Framebuffer._0 + currId));
                 gl3.glDrawBuffer(drawBuffers.get(0));
 
-                clearColor.put(3, 0);
-                gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
-                gl3.glClearBufferfv(GL_DEPTH, 0, clearDepth);
+                gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(3, 0));
+                gl3.glClearBufferfv(GL_DEPTH, 0, Resources.clearDepth);
 
                 gl3.glDisable(GL_BLEND);
                 gl3.glEnable(GL_DEPTH_TEST);

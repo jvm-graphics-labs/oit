@@ -14,7 +14,6 @@ import static com.jogamp.opengl.GL2GL3.*;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
-import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
@@ -128,7 +127,7 @@ public class Viewer implements GLEventListener {
         GL3 gl3 = glad.getGL().getGL3();
 
         gl3.setSwapInterval(0);
-        
+
         try {
             scene = new Scene(gl3, new ModelGL3(gl3));
         } catch (IOException ex) {
@@ -322,10 +321,9 @@ public class Viewer implements GLEventListener {
         Resources.numGeoPasses = 0;
 
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
-        OIT.clearColor.put(Resources.backgroundColor.toFA_()).rewind();
-        OIT.clearDepth.put(new float[]{1}).rewind();
-        gl3.glClearBufferfv(GL_COLOR, 0, OIT.clearColor);
-        gl3.glClearBufferfv(GL_DEPTH, 0, OIT.clearDepth);
+        gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, Resources.backgroundColor.x)
+                .put(1, Resources.backgroundColor.y).put(2, Resources.backgroundColor.z).put(3, 1));
+        gl3.glClearBufferfv(GL_DEPTH, 0, Resources.clearDepth.put(0, 1));
 
         gl3.glEnable(GL_DEPTH_TEST);
 

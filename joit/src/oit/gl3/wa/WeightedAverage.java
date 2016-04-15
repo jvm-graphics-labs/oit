@@ -158,11 +158,11 @@ public class WeightedAverage extends OIT {
          * (1) Accumulate Colors and Depth Complexity.
          */
         gl3.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
+        
         drawBuffers.position(0);
         gl3.glDrawBuffers(2, drawBuffers);
-
-        gl3.glClearColor(0, 0, 0, 0);
-        gl3.glClear(GL_COLOR_BUFFER_BIT);
+        gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, 0).put(1, 0).put(2, 0).put(3, 0));
+        gl3.glClearBufferfv(GL_COLOR, 1, Resources.clearColor);
 
         gl3.glBlendEquation(GL_FUNC_ADD);
         gl3.glBlendFunc(GL_ONE, GL_ONE);

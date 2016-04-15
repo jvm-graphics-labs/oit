@@ -18,7 +18,7 @@
 #define BACKGROUND_COLOR_G  1.0f
 #define BACKGROUND_COLOR_B  1.0f
 
-#define ABUFFER_RESOLVE_USE_SORTING 1
+#define ABUFFER_RESOLVE_USE_SORTING 0
 
 #define ABUFFER_RESOLVE_ALPHA_CORRECTION    0
 
@@ -48,3 +48,16 @@ precision highp float;
 precision highp int;
 layout (std140, column_major) uniform;
 layout (std430, column_major) buffer;
+/*
+layout (binding = PARAMETERS) uniform Parameters
+{
+    int screenWidth;
+    int screenHeight;
+    int useABuffer;
+    int abufferSize;
+    int useTextures;
+    int abResolveGelly;
+    int resolveUseSorting;
+    int resolveAlphaCorrection;
+    vec4 backgroundColor;
+};*/

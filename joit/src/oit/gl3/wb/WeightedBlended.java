@@ -135,10 +135,8 @@ public class WeightedBlended extends OIT {
          * Render target 0 stores a sum (weighted RGBA colors), clear it to 0.f
          * Render target 1 stores a product (transmittances), clear it to 1.f.
          */
-        clearColor.put(new float[]{0f, 0f, 0f, 1f}).rewind();
-        gl3.glClearBufferfv(GL_COLOR, 0, clearColor);
-        clearColor.put(new float[]{1f, 1f, 1f, 1f}).rewind();
-        gl3.glClearBufferfv(GL_COLOR, 1, clearColor);
+        gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, 0).put(1, 0).put(2, 0).put(3, 1));
+        gl3.glClearBufferfv(GL_COLOR, 1, Resources.clearColor.put(0, 1).put(1, 1).put(2, 1).put(3, 1));
 
         gl3.glEnable(GL_BLEND);
         gl3.glBlendEquation(GL_FUNC_ADD);

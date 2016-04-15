@@ -126,7 +126,7 @@ vec4 resolveAlphaBlend(ivec2 coords, int abNumFrag)
     const float sigma = 30.0f;
     float thickness = fragmentList[0].w / 2.0f;
 
-    finalColor=vec4(0.0f);
+    finalColor = vec4(0.0f);
     for (int i = 0; i < abNumFrag; i++)
     {
         vec4 frag = fragmentList[i];

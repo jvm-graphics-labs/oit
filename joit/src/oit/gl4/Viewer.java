@@ -24,11 +24,12 @@ import glm.glm;
 import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import oit.framework.InputListener;
 import oit.framework.Resources;
 import oit.gl4.ab.ABuffer;
-import oit.gl4.wb.WeightedBlendedOpaque;
+import oit.gl4.wb.WeightedBlended;
 
 /**
  *
@@ -38,7 +39,7 @@ public class Viewer implements GLEventListener {
 
     private final String SHADERS_ROOT = "/oit/gl4/shaders/";
     private final String SHADERS_NAME = "opaque";
-    
+
     public static void main(String[] args) {
 
         Display display = NewtFactory.createDisplay(null);
@@ -80,12 +81,28 @@ public class Viewer implements GLEventListener {
         public static final int MAX = 4;
     }
 
-    public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX);
+    public class Oit {
+
+        public static final int WEIGHTED_BLENDED = 0;
+        public static final int ABUFFER = 1;
+        public static final int MAX = 2;
+    }
+
+    public class Texture {
+
+        public static final int COLOR = 1;
+        public static final int DEPTH = 2;
+        public static final int MAX = 3;
+    }
+
+    public static IntBuffer bufferName = GLBuffers.newDirectIntBuffer(Buffer.MAX),
+            textureName = GLBuffers.newDirectIntBuffer(Texture.MAX);
+    private IntBuffer framebufferName = GLBuffers.newDirectIntBuffer(1);
     private Scene scene;
-    private WeightedBlendedOpaque weightedBlendedOpaque;
+    private OIT[] oit = new OIT[Oit.MAX];
     private ABuffer aBuffer;
     private Mat4 proj = new Mat4(), view = new Mat4();
-    private int programName;
+    private int programName, currOit, newOit;
     /**
      * https://jogamp.org/bugzilla/show_bug.cgi?id=1287
      */
@@ -100,12 +117,15 @@ public class Viewer implements GLEventListener {
 
         initBuffers(gl4);
 
+        initTargets(gl4);
+
         initProgram(gl4);
 
-        scene = new Scene(gl4);
+        initSampler(gl4);
 
-        weightedBlendedOpaque = new WeightedBlendedOpaque(gl4);
-//        aBuffer = new ABuffer(gl4);
+        initOit(gl4);
+
+        scene = new Scene(gl4);
 
         gl4.glDisable(GL4.GL_CULL_FACE);
     }
@@ -178,6 +198,36 @@ public class Viewer implements GLEventListener {
         gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
     }
 
+    private void initTargets(GL4 gl4) {
+
+        gl4.glCreateTextures(GL_TEXTURE_RECTANGLE, Texture.MAX, textureName);
+
+        gl4.glTextureParameteri(textureName.get(Texture.DEPTH), GL_TEXTURE_BASE_LEVEL, 0);
+        gl4.glTextureParameteri(textureName.get(Texture.DEPTH), GL_TEXTURE_MAX_LEVEL, 0);
+
+        gl4.glTextureStorage2D(textureName.get(Texture.DEPTH), 1, GL_DEPTH_COMPONENT32F,
+                Resources.imageSize.x, Resources.imageSize.y);
+
+        gl4.glTextureParameteri(textureName.get(Texture.COLOR), GL_TEXTURE_BASE_LEVEL, 0);
+        gl4.glTextureParameteri(textureName.get(Texture.COLOR), GL_TEXTURE_MAX_LEVEL, 0);
+
+        gl4.glTextureStorage2D(textureName.get(Texture.COLOR), 1, GL_RGBA8, Resources.imageSize.x,
+                Resources.imageSize.y);
+
+        gl4.glCreateFramebuffers(1, framebufferName);
+
+        gl4.glNamedFramebufferTexture(
+                framebufferName.get(0),
+                GL_DEPTH_ATTACHMENT,
+                textureName.get(Texture.DEPTH),
+                0);
+        gl4.glNamedFramebufferTexture(
+                framebufferName.get(0),
+                GL_COLOR_ATTACHMENT0,
+                textureName.get(Texture.COLOR),
+                0);
+    }
+
     private void initProgram(GL4 gl4) {
 
         ShaderCode vertShader = ShaderCode.create(gl4, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
@@ -192,6 +242,38 @@ public class Viewer implements GLEventListener {
         shaderProgram.link(gl4, System.out);
 
         programName = shaderProgram.program();
+    }
+
+    private void initSampler(GL4 gl4) {
+
+        FloatBuffer borderColorBuffer = GLBuffers.newDirectFloatBuffer(new float[]{0.0f, 0.0f, 0.0f, 0.0f});
+
+        gl4.glCreateSamplers(1, OIT.samplerName);
+        // TODO check GL_NEAREST_MIPMAP_NEAREST
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        gl4.glSamplerParameterfv(OIT.samplerName.get(0), GL_TEXTURE_BORDER_COLOR, borderColorBuffer);
+        gl4.glSamplerParameterf(OIT.samplerName.get(0), GL_TEXTURE_MIN_LOD, -1000.f);
+        gl4.glSamplerParameterf(OIT.samplerName.get(0), GL_TEXTURE_MAX_LOD, 1000.f);
+        gl4.glSamplerParameterf(OIT.samplerName.get(0), GL_TEXTURE_LOD_BIAS, 0.0f);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+        BufferUtils.destroyDirectBuffer(borderColorBuffer);
+    }
+
+    private void initOit(GL4 gl4) {
+
+        oit[Oit.WEIGHTED_BLENDED] = new WeightedBlended();
+
+        newOit = Oit.WEIGHTED_BLENDED;
+        currOit = newOit;
+//        oit[currOit].init(gl4);
+
+        aBuffer = new ABuffer(gl4);
     }
 
     @Override
@@ -225,11 +307,22 @@ public class Viewer implements GLEventListener {
 
             gl4.glNamedBufferSubData(bufferName.get(Buffer.PARAMETERS), 0, Float.BYTES * 2, Resources.parameters);
         }
-        
-        gl4.glUseProgram(programName);
 
-        weightedBlendedOpaque.render(gl4, scene);
-//        aBuffer.render(gl4, scene);
+        /**
+         * (1) Initialize Opaque Depth Fbo.
+         */
+//        gl4.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName.get(0));
+//
+//        gl4.glClearBufferfv(GL_COLOR, 0, OIT.clearColor.put(0, 1).put(1, 1).put(2, 1).put(3, 1));
+//        gl4.glClearBufferfv(GL_DEPTH, 0, OIT.clearDepth.put(0, 1));
+//
+//        gl4.glEnable(GL_DEPTH_TEST);
+//
+//        gl4.glUseProgram(programName);
+//        scene.renderOpaque(gl4);
+
+//        oit[currOit].render(gl4, scene);
+        aBuffer.render(gl4, scene);
     }
 
     @Override
@@ -237,10 +330,10 @@ public class Viewer implements GLEventListener {
 
         GL4 gl4 = glad.getGL().getGL4();
 
-        weightedBlendedOpaque.reshape(gl4);
-//        aBuffer.reshape(gl4);
-
         Resources.imageSize.set(width, height);
+
+//        oit[currOit].reshape(gl4);
+        aBuffer.reshape(gl4);
 
         glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
         proj.toFb(Resources.matBuffer);

@@ -158,26 +158,16 @@ public class DualDepthPeeling extends OIT {
          * Clear to 0.0 and use MAX blending to filter written color
          * At most one front color and one back color can be written every pass.
          */
-//        clearColor.put(new float[]{0, 0.1f, 0.5f, 0.9f}).rewind();
-//        clearDepth.put(new float[]{1}).rewind();
-//        gl3.glClearBufferfv(GL_COLOR, 1, clearColor);
-//        gl3.glClearBufferfv(GL_COLOR, 2, clearColor);
         drawBuffers.position(1);
         gl3.glDrawBuffers(2, drawBuffers);
-        gl3.glClearColor(0, 0, 0, 0);
-        gl3.glClear(GL_COLOR_BUFFER_BIT);
-
-//        gl3.glReadBuffer(GL_COLOR_ATTACHMENT1);
-//        ByteBuffer buffer = GLBuffers.newDirectByteBuffer(4 * Float.BYTES);
-//        gl3.glReadPixels(500, 500, 1, 1, GL_RGBA, GL_FLOAT, buffer);
-//        System.out.println("pixel (" + buffer.getFloat() + ", " + buffer.getFloat() + ", " + buffer.getFloat()
-//                + ", " + buffer.getFloat() + ")");
+        gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, 0).put(1, 0).put(2, 0).put(3, 0));
+        gl3.glClearBufferfv(GL_COLOR, 1, Resources.clearColor);
+        
         /**
-         * Render target 0 stores (-minDepth, maxDepth, alphaMultiplier).
+         * Render target 0 stores (-minDepth, maxDepth).
          */
         gl3.glDrawBuffer(drawBuffers.get(0));
-        gl3.glClearColor(-MAX_DEPTH, -MAX_DEPTH, 0, 0);
-        gl3.glClear(GL_COLOR_BUFFER_BIT);
+        gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, -MAX_DEPTH).put(1, -MAX_DEPTH));
         gl3.glBlendEquation(GL_MAX);
 
         if (Resources.useOQ) {
@@ -202,16 +192,14 @@ public class DualDepthPeeling extends OIT {
          * Since we cannot blend the back colors in the geometry passes,
          * we use another render target to do the alpha blending.
          */
-        gl3.glDrawBuffer(drawBuffers.get(6));
         gl3.glColorMask(false, false, false, true);
-        gl3.glClearColor(1, 1, 1, 0);
-        gl3.glClear(GL_COLOR_BUFFER_BIT);
+        gl3.glClearBufferfv(GL_COLOR, 6, Resources.clearColor.put(3, 0));
         gl3.glColorMask(true, true, true, true);
 
         int currId = 0;
 
         if (!occluded) {
-            
+
             for (int pass = 1; Resources.useOQ || pass < Resources.numPasses; pass++) {
 
                 currId = pass % 2;
@@ -220,12 +208,11 @@ public class DualDepthPeeling extends OIT {
 
                 drawBuffers.position(buffId + 1);
                 gl3.glDrawBuffers(2, drawBuffers);
-                gl3.glClearColor(0, 0, 0, 0);
-                gl3.glClear(GL_COLOR_BUFFER_BIT);
+                gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, 0).put(1, 0).put(2, 0).put(3, 0));
+                gl3.glClearBufferfv(GL_COLOR, 1, Resources.clearColor);
 
                 gl3.glDrawBuffer(drawBuffers.get(buffId + 0));
-                gl3.glClearColor(-MAX_DEPTH, -MAX_DEPTH, 0, 0);
-                gl3.glClear(GL_COLOR_BUFFER_BIT);
+                gl3.glClearBufferfv(GL_COLOR, 0, Resources.clearColor.put(0, -MAX_DEPTH).put(1, -MAX_DEPTH));
 
                 /**
                  * Render target 0: RG32F MAX blending

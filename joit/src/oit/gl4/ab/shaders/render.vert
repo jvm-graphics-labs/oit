@@ -32,7 +32,7 @@ void main()
 {
     vec4 pos = t0.proj * (t0.view * (t1.model * vec4(position, 1.0f)));
 
-    vec3 normalEye = normalize((t0.view * (t1.model * vec4(normal, 1.0f))).xyz);
+    vec3 normalEye = normalize(mat3(t0.view) * (mat3(t1.model) * normal));
 
     frag.pos = pos;
     frag.texCoord = vec3(position.xy, abs(normalEye.z));
