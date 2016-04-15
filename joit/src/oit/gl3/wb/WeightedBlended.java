@@ -57,15 +57,8 @@ public class WeightedBlended extends OIT {
         {
             ShaderCode vertShader = ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
                     new String[]{SHADERS_SRC[Program.INIT], "shade"}, "vert", null, null, null, false);
-            /**
-             * Since definind same ubo in different shaders of the same program does not work, let's use a trick:
-             * let's include it with '#include' and let's create then just one shader.
-             * http://forum.jogamp.org/Sharing-the-same-ubo-among-different-shaders-of-the-same-program-td4036597.html
-             */
-//            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-//                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "fs", null, null, null, true);
-            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
-                    SHADERS_SRC[Program.INIT], "frag", null, true);
+            ShaderCode fragShader = ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
+                    new String[]{SHADERS_SRC[Program.INIT], "shade"}, "frag", null, null, null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);

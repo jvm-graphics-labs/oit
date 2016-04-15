@@ -27,7 +27,7 @@ public class ABuffer {
     private static final String[] FS_SRC = new String[]{"render", "display", "clear"};
     private static final int ABUFFER_SIZE = 16;
 
-    private final boolean useABuffer = true;
+    private final boolean useABuffer = false;
     private final boolean abufferUseSorting = true;
     private final boolean resolveAlphaCorrection = true;
     private final boolean resolveGelly = false;
@@ -54,7 +54,7 @@ public class ABuffer {
     private FullscreenQuad fullscreenQuad;
 
     public ABuffer(GL4 gl4) {
-        
+
         initPrograms(gl4);
 
         initTargets(gl4);
@@ -109,17 +109,20 @@ public class ABuffer {
 
             gl4.glTextureStorage3D(textureName.get(Texture.ABUFFER), 1, GL_RGBA32F, Resources.imageSize.x,
                     Resources.imageSize.y, ABUFFER_SIZE);
-            
-            gl4.glBindTextureUnit(Semantic.Sampler.ABUFFER, Texture.ABUFFER);
+
+            gl4.glBindImageTexture(Semantic.Sampler.ABUFFER, textureName.get(Texture.ABUFFER), 0, true, 0, GL_READ_WRITE,
+                    GL_RGBA32F);
 
             gl4.glTextureParameteri(textureName.get(Texture.ABUFFER_COUNTER), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             gl4.glTextureParameteri(textureName.get(Texture.ABUFFER_COUNTER), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-            gl4.glTextureStorage2D(textureName.get(Texture.ABUFFER_COUNTER), 1, GL_R32F, Resources.imageSize.x,
+//            gl4.glTextureStorage2D(textureName.get(Texture.ABUFFER_COUNTER), 1, GL_R32F, Resources.imageSize.x,
+            gl4.glTextureStorage2D(textureName.get(Texture.ABUFFER_COUNTER), 1, GL_R32UI, Resources.imageSize.x,
                     Resources.imageSize.y);
 
-            gl4.glBindTextureUnit(Semantic.Sampler.ABUFFER_COUNTER, Texture.ABUFFER_COUNTER);
-            
+            gl4.glBindImageTexture(Semantic.Sampler.ABUFFER_COUNTER, textureName.get(Texture.ABUFFER_COUNTER), 0, false,
+                    0, GL_READ_WRITE, GL_R32UI);
+
         } else {
 
             // TODO

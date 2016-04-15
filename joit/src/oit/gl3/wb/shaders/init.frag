@@ -33,23 +33,23 @@
 //----------------------------------------------------------------------------------
 
 #version 330
+
 #extension GL_ARB_draw_buffers : require
 
 #include semantic.glsl
-#include shade.frag
-
-/*uniform Parameters
-{
-    float alpha;
-    float depthScale;
-} params;*/
 
 uniform sampler2DRect opaqueDepthTex;
 
 layout (location = SUM_COLOR) out vec4 sumColor;
 layout (location = SUM_WEIGHT) out vec4 sumWeight;
 
-//vec4 shadeFragment();
+vec4 shadeFragment();
+
+uniform Parameters
+{
+    float alpha;
+    float depthScale;
+} params;
 
 void main(void)
 {

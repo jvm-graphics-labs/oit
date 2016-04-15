@@ -9,7 +9,7 @@
 //Macros changed from the C++ side
 #define SCREEN_WIDTH            1024
 #define SCREEN_HEIGHT           768
-#define USE_ABUFFER             1
+#define USE_ABUFFER             0
 #define ABUFFER_SIZE            16
 #define ABUFFER_USE_TEXTURES    1
 #define ABUFFER_RESOLVE_GELLY   0

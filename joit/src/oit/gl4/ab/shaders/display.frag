@@ -17,8 +17,8 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 layout (location = FRAG_COLOR) out vec4 outColor;
 
 #if ABUFFER_USE_TEXTURES
-    uniform layout (location = ABUFFER_COUNTER, size1x32) uimage2D abufferCounterImg;
-    uniform layout (location = ABUFFER, size4x32) image2DArray abufferImg;
+    layout (binding = ABUFFER_COUNTER, r32ui) uniform uimage2D abufferCounterImg;
+    layout (binding = ABUFFER, rgba32f) uniform image2DArray abufferImg;
 #else
     uniform vec4 *d_abuffer;
     uniform uint *d_abufferIdx;

@@ -11,13 +11,13 @@
 layout (pixel_center_integer) in vec4 gl_FragCoord;
 
 #if ABUFFER_USE_TEXTURES
-//A-Buffer fragments storage
-coherent uniform layout (location = ABUFFER, size4x32) image2DArray abufferImg;
-//A-Buffer fragment counter
-coherent uniform layout (location = ABUFFER_COUNTER, size1x32) uimage2D abufferCounterImg;
+    //A-Buffer fragments storage
+    layout (binding = ABUFFER, rgba32f) uniform coherent image2DArray abufferImg;
+    //A-Buffer fragment counter
+    layout (binding = ABUFFER_COUNTER, r32ui) uniform coherent uimage2D abufferCounterImg;
 #else
-uniform vec4 *d_abuffer;
-uniform coherent uint *d_abufferIdx;
+    uniform vec4 *d_abuffer;
+    uniform coherent uint *d_abufferIdx;
 #endif
 
 layout (location = BLOCK) in Block
@@ -41,10 +41,12 @@ vec3 shadeStrips(vec3 texcoord);
         {
             //Atomic increment of the counter
             #if ABUFFER_USE_TEXTURES == 0
-                int abidx = (int) atomicIncWrap(d_abufferIdx + coords.x + coords.y * SCREEN_WIDTH, ABUFFER_SIZE);
+                // TODO, atomicIncWrap deprecated
+                //int abidx = (int) atomicIncWrap(d_abufferIdx + coords.x + coords.y * SCREEN_WIDTH, ABUFFER_SIZE);
             #else
-                int abidx = (int) imageAtomicIncWrap(abufferCounterImg, coords, ABUFFER_SIZE);
-                //int abidx=imageAtomicAdd(abufferCounterImg, coords, 1);
+                int abidx = (int) imageLoad(abufferCounterImg, coords).r;
+                if (abidx < ABUFFER_SIZE)
+                    imageAtomicAdd(abufferCounterImg, coords, 1);
             #endif
 
             //Create fragment to be stored
@@ -57,9 +59,9 @@ vec3 shadeStrips(vec3 texcoord);
                 col = shadeStrips(frag.texCoord);
             #else
                 //Store pseudo-illumination info
-                vec3 N = normalize(frag.normal);
-                vec3 L = normalize(vec3(0.0f,1.0f,1.0f));
-                col = vec3(dot(N,L));
+                vec3 n = normalize(frag.normal);
+                vec3 l = normalize(vec3(0.0f,1.0f,1.0f));
+                col = vec3(dot(n, l));
             #endif
 
             abuffval.rgb = col;
@@ -92,8 +94,8 @@ vec3 shadeStrips(vec3 texcoord)
     vec3 col;
     float i = floor(texcoord.x * 6.0f);
 
-    col.rgb = fract(i * 0.5f) == 0.0f ? vec3(0.4f, 0.85f, 0.0f) : vec3(1.0f);
-    col.rgb *= texcoord.z;
+    col = fract(i * 0.5f) == 0.0f ? vec3(0.4f, 0.85f, 0.0f) : vec3(1.0f);
+    col *= texcoord.z;
 
     return col;
 }

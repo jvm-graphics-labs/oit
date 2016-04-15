@@ -18,6 +18,8 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLBuffers;
+import com.jogamp.opengl.util.glsl.ShaderCode;
+import com.jogamp.opengl.util.glsl.ShaderProgram;
 import glm.glm;
 import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
@@ -34,6 +36,9 @@ import oit.gl4.wb.WeightedBlendedOpaque;
  */
 public class Viewer implements GLEventListener {
 
+    private final String SHADERS_ROOT = "/oit/gl4/shaders/";
+    private final String SHADERS_NAME = "opaque";
+    
     public static void main(String[] args) {
 
         Display display = NewtFactory.createDisplay(null);
@@ -80,6 +85,7 @@ public class Viewer implements GLEventListener {
     private WeightedBlendedOpaque weightedBlendedOpaque;
     private ABuffer aBuffer;
     private Mat4 proj = new Mat4(), view = new Mat4();
+    private int programName;
     /**
      * https://jogamp.org/bugzilla/show_bug.cgi?id=1287
      */
@@ -94,10 +100,12 @@ public class Viewer implements GLEventListener {
 
         initBuffers(gl4);
 
+        initProgram(gl4);
+
         scene = new Scene(gl4);
 
-//        weightedBlendedOpaque = new WeightedBlendedOpaque(gl4);
-        aBuffer = new ABuffer(gl4);
+        weightedBlendedOpaque = new WeightedBlendedOpaque(gl4);
+//        aBuffer = new ABuffer(gl4);
 
         gl4.glDisable(GL4.GL_CULL_FACE);
     }
@@ -170,6 +178,22 @@ public class Viewer implements GLEventListener {
         gl4.glBindBufferBase(GL_UNIFORM_BUFFER, Semantic.Uniform.PARAMETERS, bufferName.get(Buffer.PARAMETERS));
     }
 
+    private void initProgram(GL4 gl4) {
+
+        ShaderCode vertShader = ShaderCode.create(gl4, GL_VERTEX_SHADER, this.getClass(), SHADERS_ROOT, null,
+                SHADERS_NAME, "vert", null, true);
+        ShaderCode fragShader = ShaderCode.create(gl4, GL_FRAGMENT_SHADER, this.getClass(), SHADERS_ROOT, null,
+                SHADERS_NAME, "frag", null, true);
+
+        ShaderProgram shaderProgram = new ShaderProgram();
+        shaderProgram.add(vertShader);
+        shaderProgram.add(fragShader);
+
+        shaderProgram.link(gl4, System.out);
+
+        programName = shaderProgram.program();
+    }
+
     @Override
     public void dispose(GLAutoDrawable glad) {
 
@@ -201,9 +225,11 @@ public class Viewer implements GLEventListener {
 
             gl4.glNamedBufferSubData(bufferName.get(Buffer.PARAMETERS), 0, Float.BYTES * 2, Resources.parameters);
         }
+        
+        gl4.glUseProgram(programName);
 
-//        weightedBlendedOpaque.render(gl4, scene);
-        aBuffer.render(gl4, scene);
+        weightedBlendedOpaque.render(gl4, scene);
+//        aBuffer.render(gl4, scene);
     }
 
     @Override
@@ -211,8 +237,8 @@ public class Viewer implements GLEventListener {
 
         GL4 gl4 = glad.getGL().getGL4();
 
-//        weightedBlendedOpaque.reshape(gl4);
-        aBuffer.reshape(gl4);
+        weightedBlendedOpaque.reshape(gl4);
+//        aBuffer.reshape(gl4);
 
         Resources.imageSize.set(width, height);
 

@@ -66,11 +66,11 @@ public class DualDepthPeeling extends OIT {
             ShaderCode vertShader = (program == Program.INIT) ? ShaderCode.create(gl3, GL_VERTEX_SHADER, this.getClass(),
                     SHADERS_ROOT, null, SHADERS_SRC[program], "vert", null, true)
                     : ShaderCode.create(gl3, GL_VERTEX_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                            new String[]{SHADERS_SRC[Program.PEEL], "shade"}, "vert", null, null, null, true);;
+                            new String[]{SHADERS_SRC[program], "shade"}, "vert", null, null, null, true);;
             ShaderCode fragShader = (program == Program.INIT) ? ShaderCode.create(gl3, GL_FRAGMENT_SHADER, this.getClass(),
                     SHADERS_ROOT, null, SHADERS_SRC[program], "frag", null, true)
                     : ShaderCode.create(gl3, GL_FRAGMENT_SHADER, 2, this.getClass(), SHADERS_ROOT,
-                            new String[]{SHADERS_SRC[Program.PEEL], "shade"}, "frag", null, null, null, true);
+                            new String[]{SHADERS_SRC[program], "shade"}, "frag", null, null, null, true);
 
             ShaderProgram shaderProgram = new ShaderProgram();
             shaderProgram.add(vertShader);

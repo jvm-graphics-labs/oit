@@ -33,14 +33,13 @@ public class WeightedBlendedOpaque {
     private boolean bug1287 = true;
 
     private final String SHADERS_ROOT = "/oit/gl4/wb/shaders/";
-    private final String[] SHADERS_NAME = new String[]{"opaque", "init", "final"};
+    private final String[] SHADERS_NAME = new String[]{"init", "final"};
 
     private class Program {
 
-        public static final int OPAQUE = 0;
-        public static final int INIT = 1;
-        public static final int FINAL = 2;
-        public static final int MAX = 3;
+        public static final int INIT = 0;
+        public static final int FINAL = 1;
+        public static final int MAX = 2;
     }
 
     private class Texture {
@@ -130,7 +129,7 @@ public class WeightedBlendedOpaque {
 
         gl4.glEnable(GL_DEPTH_TEST);
 
-        gl4.glUseProgram(programName[Program.OPAQUE]);
+//        gl4.glUseProgram(programName[Program.OPAQUE]);
         scene.renderOpaque(gl4);
 
         gl4.glDisable(GL_DEPTH_TEST);

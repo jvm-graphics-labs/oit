@@ -436,7 +436,7 @@ public class Viewer implements GLEventListener {
         System.exit(0);
     }
 
-    private void checkError(GL3 gl3, String string) {
+    public static void checkError(GL3 gl3, String string) {
 
         int error = gl3.glGetError();
 
