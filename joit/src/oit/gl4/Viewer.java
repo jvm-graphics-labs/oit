@@ -261,6 +261,10 @@ public class Viewer implements GLEventListener {
         gl4.glSamplerParameterf(OIT.samplerName.get(0), GL_TEXTURE_LOD_BIAS, 0.0f);
         gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_COMPARE_MODE, GL_NONE);
         gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_SWIZZLE_R, GL_RED);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+        gl4.glSamplerParameteri(OIT.samplerName.get(0), GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
 
         BufferUtils.destroyDirectBuffer(borderColorBuffer);
     }
@@ -297,7 +301,7 @@ public class Viewer implements GLEventListener {
                     .translate(ModelGL4.trans[0], ModelGL4.trans[1], ModelGL4.trans[2])
                     .scale(ModelGL4.scale);
 
-            view.toFb(Resources.matBuffer);
+            view.toDbb(Resources.matBuffer);
 
             gl4.glNamedBufferSubData(bufferName.get(Buffer.TRANSFORM0), 0, Mat4.SIZE, Resources.matBuffer);
         }
@@ -336,7 +340,7 @@ public class Viewer implements GLEventListener {
         aBuffer.reshape(gl4);
 
         glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
-        proj.toFb(Resources.matBuffer);
+        proj.toDbb(Resources.matBuffer);
         gl4.glNamedBufferSubData(bufferName.get(Buffer.TRANSFORM0), Mat4.SIZE, Mat4.SIZE, Resources.matBuffer);
 
         gl4.glViewport(0, 0, width, height);

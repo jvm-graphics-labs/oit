@@ -43,7 +43,7 @@ public class Scene {
 
         for (Mat4 opaque : opaques) {
 
-            opaque.toFb(modelBuffer);
+            opaque.toDbb(modelBuffer);
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, modelBuffer);
 
@@ -56,7 +56,7 @@ public class Scene {
 
         for (Mat4 transparent : transparents) {
             
-            transparent.toFb(modelBuffer);
+            transparent.toDbb(modelBuffer);
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, modelBuffer);
 

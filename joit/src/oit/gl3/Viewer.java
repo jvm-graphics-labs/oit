@@ -299,7 +299,7 @@ public class Viewer implements GLEventListener {
                     .rotate((float) Math.toRadians(InputListener.rot.y), 0, 1, 0)
                     .translate(Model.trans[0], Model.trans[1], Model.trans[2])
                     .scale(Model.scale);
-            proj.mul(view, projView).toFb(Resources.matBuffer);
+            proj.mul(view, projView).toDbb(Resources.matBuffer);
 
             gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM0));
             gl3.glBufferSubData(GL_UNIFORM_BUFFER, 0, Mat4.SIZE, Resources.matBuffer);
@@ -412,7 +412,7 @@ public class Viewer implements GLEventListener {
 
         {
             glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
-            proj.toFb(Resources.matBuffer);
+            proj.toDbb(Resources.matBuffer);
         }
 
         gl3.glViewport(0, 0, width, height);

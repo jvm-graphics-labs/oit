@@ -27,7 +27,8 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
             imageStore(abufferImg, ivec3(coords, 0), vec4(0.0f));
         }
         //Discard fragment so nothing is writen to the framebuffer
-        discard;
+        //discard;
+imageStore(abufferImg, ivec3(coords, 0), vec4(1.0f));        
     }
 #else	//#if ABUFFER_USE_TEXTURES
 

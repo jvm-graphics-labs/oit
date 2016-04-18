@@ -200,6 +200,7 @@ public class ABuffer {
             if (!useTextures) {
                 // TODO
             }
+            gl4.glClearNamedBufferData(GL_BUFFER, GL_R8_SNORM, GL_MAX, GL_RG, textureName);
             gl4.glUseProgram(programName[Program.CLEAR]);
             fullscreenQuad.render(gl4);
 
@@ -209,7 +210,7 @@ public class ABuffer {
 
         // Renderg the model into the A-Buffer
         gl4.glUseProgram(programName[Program.RENDER]);
-        scene.renderTransparent(gl4);
+//        scene.renderTransparent(gl4);
 
         // Resolve A-Buffer
         if (useABuffer) {

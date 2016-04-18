@@ -48,7 +48,7 @@ public class Scene {
 
         for (int i = 0; i < opaques.length; i++) {
 
-            opaques[i].toFb(modelBuffer);
+            opaques[i].toDbb(modelBuffer);
 
             gl4.glNamedBufferSubData(
                     Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1),
@@ -64,7 +64,7 @@ public class Scene {
 
         for (int i = 0; i < transparents.length; i++) {
 
-            transparents[i].toFb(modelBuffer);
+            transparents[i].toDbb(modelBuffer);
 
             gl4.glNamedBufferSubData(
                     Viewer.bufferName.get(Viewer.Buffer.TRANSFORM1),
