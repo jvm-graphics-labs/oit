@@ -16,9 +16,9 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 //Output fragment color
 layout (location = FRAG_COLOR) out vec4 outColor;
 
-#if ABUFFER_USE_TEXTURES
-    layout (binding = ABUFFER_COUNTER, r32ui) uniform uimage2D abufferCounterImg;
+#if ABUFFER_USE_TEXTURES    
     layout (binding = ABUFFER, rgba32f) uniform image2DArray abufferImg;
+    layout (binding = ABUFFER_COUNTER, r32ui) uniform uimage2D abufferCounterImg;
 #else
     uniform vec4 *d_abuffer;
     uniform uint *d_abufferIdx;
@@ -42,7 +42,7 @@ void main(void)
     if (coords.x >= 0 && coords.y >= 0 && coords.x < SCREEN_WIDTH && coords.y < SCREEN_HEIGHT )
     {
         //Load the number of fragments in the current pixel.
-        #if ABUFFER_USE_TEXTURES
+        /*#if ABUFFER_USE_TEXTURES
             int abNumFrag = (int) imageLoad(abufferCounterImg, coords).r;
         #else
             int abNumFrag = (int) d_abufferIdx[coords.x + coords.y * SCREEN_WIDTH];
@@ -53,7 +53,9 @@ void main(void)
             if(abNumFrag > ABUFFER_SIZE) 
                 abNumFrag = ABUFFER_SIZE;
         #endif
-        
+        //outColor = vec4(0,1,1,1);
+        //outColor = imageLoad(abufferImg, ivec3(gl_FragCoord.xy, 0));
+        //outColor = outColor = resolveClosest(coords, abNumFrag);
         if (abNumFrag > 0)
         {
             //Copute ans output final color for the frame buffer
@@ -71,8 +73,9 @@ void main(void)
         } 
         else 
             //If no fragment, write nothing
-            discard;
+            discard;*/
     }	
+    outColor = imageLoad(abufferImg, ivec3(gl_FragCoord.xy, 0));
 }
 
 vec4 resolveClosest(ivec2 coords, int abNumFrag)
@@ -87,7 +90,7 @@ vec4 resolveClosest(ivec2 coords, int abNumFrag)
             vec4 val = d_abuffer[coords.x + coords.y * SCREEN_WIDTH + (i * SCREEN_WIDTH * SCREEN_HEIGHT)];
         #endif
         if(val.w < minFrag.w)
-            minFrag=val;
+            minFrag = val;
     }
     //Output final color for the frame buffer
     return minFrag;

@@ -11,8 +11,8 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 #if ABUFFER_USE_TEXTURES
 
-    layout (binding = ABUFFER_COUNTER, r32ui) uniform coherent uimage2D abufferCounterImg;
     layout (binding = ABUFFER, rgba32f) uniform coherent image2DArray abufferImg;
+    layout (binding = ABUFFER_COUNTER, r32ui) uniform coherent uimage2D abufferCounterImg;
 
     void main(void) 
     {

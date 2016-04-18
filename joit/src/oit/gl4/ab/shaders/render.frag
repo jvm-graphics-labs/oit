@@ -40,13 +40,12 @@ vec3 shadeStrips(vec3 texcoord);
         if(coords.x >= 0 && coords.y >= 0 && coords.x < SCREEN_WIDTH && coords.y < SCREEN_HEIGHT )
         {
             //Atomic increment of the counter
-            #if ABUFFER_USE_TEXTURES == 0
+            /*#if ABUFFER_USE_TEXTURES == 0
                 // TODO, atomicIncWrap deprecated
                 //int abidx = (int) atomicIncWrap(d_abufferIdx + coords.x + coords.y * SCREEN_WIDTH, ABUFFER_SIZE);
             #else
-                int abidx = (int) imageLoad(abufferCounterImg, coords).r;
-                if (abidx < ABUFFER_SIZE)
-                    imageAtomicAdd(abufferCounterImg, coords, 1);
+                imageAtomicAdd(abufferCounterImg, coords, 1);
+                imageAtomicMax(abufferCounterImg, coords, ABUFFER_SIZE);
             #endif
 
             //Create fragment to be stored
@@ -71,11 +70,13 @@ vec3 shadeStrips(vec3 texcoord);
             #if ABUFFER_USE_TEXTURES == 0
                 d_abuffer[coords.x + coords.y * SCREEN_WIDTH + (abidx * SCREEN_WIDTH * SCREEN_HEIGHT)] = abuffval;
             #else
-                imageStore(abufferImg, ivec3(coords, abidx), abuffval);
-            #endif
+                //imageStore(abufferImg, ivec3(coords, abidx), abuffval);
+                imageStore(abufferImg, ivec3(coords, 0), vec4(0,1,1,1));
+            #endif*/
         }
         //Discard fragment so nothing is writen to the framebuffer
-        discard;
+        //discard;
+        imageStore(abufferImg, ivec3(coords, 0), vec4(0,1,1,1));
     }
 #else	//#if USE_ABUFFER
 
