@@ -275,9 +275,9 @@ public class Viewer implements GLEventListener {
 
         newOit = Oit.WEIGHTED_BLENDED;
         currOit = newOit;
-//        oit[currOit].init(gl4);
+        oit[currOit].init(gl4);
 
-        aBuffer = new ABuffer(gl4);
+//        aBuffer = new ABuffer(gl4);
     }
 
     @Override
@@ -325,8 +325,8 @@ public class Viewer implements GLEventListener {
 //        gl4.glUseProgram(programName);
 //        scene.renderOpaque(gl4);
 
-//        oit[currOit].render(gl4, scene);
-        aBuffer.render(gl4, scene);
+        oit[currOit].render(gl4, scene);
+//        aBuffer.render(gl4, scene);
     }
 
     @Override
@@ -336,8 +336,8 @@ public class Viewer implements GLEventListener {
 
         Resources.imageSize.set(width, height);
 
-//        oit[currOit].reshape(gl4);
-        aBuffer.reshape(gl4);
+        oit[currOit].reshape(gl4);
+//        aBuffer.reshape(gl4);
 
         glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
         proj.toDbb(Resources.matBuffer);
