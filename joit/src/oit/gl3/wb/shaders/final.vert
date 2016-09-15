@@ -41,9 +41,9 @@ layout (location = POSITION) in vec2 position;
 uniform Transform2
 {
     mat4 modelToClip;
-} t2;
+};
 
 void main(void)
 {
-     gl_Position = t2.modelToClip * vec4(position, 0.0, 1.0);
+     gl_Position = modelToClip * vec4(position, 0.0, 1.0);
 }

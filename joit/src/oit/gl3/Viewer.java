@@ -20,7 +20,7 @@ import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
-import glm.glm;
+import glm.Glm;
 import glm.mat._4.Mat4;
 import glm.vec._3.Vec3;
 import java.io.IOException;
@@ -172,7 +172,7 @@ public class Viewer implements GLEventListener {
         gl3.glBufferData(GL_UNIFORM_BUFFER, Float.BYTES * 2, Resources.parameters, GL_DYNAMIC_DRAW);
 
         ByteBuffer modelToClip = GLBuffers.newDirectByteBuffer(Mat4.SIZE);
-        modelToClip.asFloatBuffer().put(glm.ortho_(0, 1, 0, 1).toFa_());
+        modelToClip.asFloatBuffer().put(Glm.ortho_(0, 1, 0, 1).toFa_());
 
         gl3.glBindBuffer(GL_UNIFORM_BUFFER, bufferName.get(Buffer.TRANSFORM2));
         gl3.glBufferData(GL_UNIFORM_BUFFER, Mat4.SIZE, modelToClip, GL_STATIC_DRAW);
@@ -294,7 +294,7 @@ public class Viewer implements GLEventListener {
         GL3 gl3 = glad.getGL().getGL3();
 
         {
-            glm.lookAt(InputListener.pos, new Vec3(InputListener.pos.x, InputListener.pos.y, 0), new Vec3(0, 1, 0), view)
+            Glm.lookAt(InputListener.pos, new Vec3(InputListener.pos.x, InputListener.pos.y, 0), new Vec3(0, 1, 0), view)
                     .rotate((float) Math.toRadians(InputListener.rot.x), 1, 0, 0)
                     .rotate((float) Math.toRadians(InputListener.rot.y), 0, 1, 0)
                     .translate(Model.trans[0], Model.trans[1], Model.trans[2])
@@ -411,7 +411,7 @@ public class Viewer implements GLEventListener {
         oit[currOit].reshape(gl3);
 
         {
-            glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
+            Glm.perspective((float) Math.toRadians(30f), (float) width / height, 0.0001f, 10, proj);
             proj.toDbb(Resources.matBuffer);
         }
 
